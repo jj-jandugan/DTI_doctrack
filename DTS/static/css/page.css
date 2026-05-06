@@ -1,0 +1,98 @@
+/* Consolidated and Theme-Matched Pagination Styles */
+.pagination-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 30px;
+    padding-bottom: 50px;
+}
+
+.pagination {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Base Link Styling */
+.page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    /* Increased duration to 0.3s and added transform for smoothness */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Number Buttons (Square) */
+.page-number {
+    width: 38px;
+    height: 38px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #263D81;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.page-number:hover {
+    background-color: #f1f5f9;
+    border-color: #263D81;
+    color: #263D81;
+    transform: translateY(-2px); /* Subtle lift */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}border-color: #263D81;
+
+/* Previous/Next Nav Buttons */
+.page-nav-btn {
+    height: 38px;
+    padding: 0 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db !important; /* Forces border visibility */
+    border-radius: 8px;
+}
+
+/* FIX: Hover effect for Nav Buttons */
+.page-nav-btn:hover {
+    background-color: #f8fafc;
+    border-color: #263D81 !important;
+    color: #263D81;
+    transform: translateY(-2px); /* Subtle lift */
+    /* Smoother, slightly larger shadow on hover */
+    box-shadow: 0 10px 15px -3px rgba(38, 61, 129, 0.1);
+}
+
+.page-item.active .page-link:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Active State */
+.page-item.active .page-link {
+    background-color: #263D81 !important;
+    border-color: #263D81 !important;
+    color: #ffffff !important;
+}
+
+/* Disabled State */
+.page-item.disabled .page-link {
+    color: #cbd5e1 !important;
+    background-color: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 12px;
+}
