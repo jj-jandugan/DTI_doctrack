@@ -6,19 +6,20 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	$email = trim($_POST['email'] ?? '');
 
-	if (!empty($username)) {
+	if (!empty($email)) {
 		try {
 			$stmt = $pdo->prepare("
                 SELECT u.id, u.password, u.first_name, u.last_name, p.role, p.division_id
                 FROM auth_user u
                 LEFT JOIN records_userprofile p ON u.id = p.user_id
-                WHERE u.username = :username AND u.is_active = 1
+                WHERE u.email = :email AND u.is_active = 1
             ");
 
-			$stmt->execute(['username' => $username]);
+			$stmt->execute(['email' => $email]);
 			$user = $stmt->fetch();
 
 			if ($user) {
+				// WALA PA LOGIC
 
 				if (empty($error)) {
 					exit;
