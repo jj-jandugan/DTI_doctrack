@@ -1,6 +1,6 @@
 <?php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 // Security Check
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {

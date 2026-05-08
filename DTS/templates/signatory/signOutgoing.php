@@ -1,7 +1,7 @@
 <?php
 // templates/signatory/signOutgoing.php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 // Security Check: Only 'RD' or 'ARD' role can access
 if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
