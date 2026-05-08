@@ -1,0 +1,76 @@
+html, body {
+    overscroll-behavior: none;
+    background-color: #f3f4f6;
+}
+
+.custom-header {
+    height: 70px;
+}
+
+.profile-circle {
+    width: 42px;
+    height: 42px;
+    background-color: #d9d9d9;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.notification-bell {
+    color: #2b3e83;
+    font-size: 1.6rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.notification-bell:hover {
+    color: #1a2755;
+}
+
+.btn-logout {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #2b3e83;
+    color: #ffffff !important;
+    border-radius: 50rem; 
+    padding: 8px 26px;
+    font-weight: 500;
+    border: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-logout::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #2d4694 0%, #1e2f66 100%);
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+.btn-logout:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(38, 61, 129, 0.3);
+    color: #ffffff;
+}
+
+.btn-logout:hover::before {
+    opacity: 1;
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+}
+
+.main-wrapper {
+    margin-top: 0 !important;
+}

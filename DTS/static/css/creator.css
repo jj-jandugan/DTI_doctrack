@@ -1,0 +1,52 @@
+.creator-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.creator-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+}
+/* Added Helper Variant */
+.creator-avatar.sm {
+    width: 28px;
+    height: 28px;
+}
+.creator-avatar i {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+.creator-avatar.sm i {
+    font-size: 0.7rem;
+}
+.creator-info {
+    display: flex;
+    flex-direction: column;
+}
+.creator-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #111827;
+}
+/* Added Helper Variant */
+.creator-name.small {
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+.creator-role {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 400;
+    line-height: 1.4;
+}
+/* Added Helper Variant */
+.creator-role.smaller {
+    font-size: 0.75rem;
+}

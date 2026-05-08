@@ -1,0 +1,21 @@
+.graph-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    height: 100%;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px; 
+    width: 100%;
+}
+
+.graph-card h5 {
+    color: #1e293b;
+    font-size: 1.1rem;
+    border-left: 4px solid #263D81;
+    padding-left: 12px;
+}
