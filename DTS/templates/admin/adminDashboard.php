@@ -81,14 +81,11 @@ foreach ($divData as $row) {
 }
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="mb-4">
         <h2 class="text-dark fw-bold mb-0">System Overview</h2>
         <p class="text-secondary">Monitor system health, user statistics, and document tracking data.</p>
     </div>
-
     <div class="cards-grid mb-5">
         <div class="custom-card card-incoming">
             <div class="card-number"><?= number_format($total_docs) ?></div>
@@ -97,7 +94,6 @@ require_once BASE_PATH . 'includes/header.php';
                 <span>Total<br>Documents</span>
             </div>
         </div>
-
         <div class="custom-card card-approval">
             <div class="card-number"><?= number_format($active_docs) ?></div>
             <div class="card-info">
@@ -105,7 +101,6 @@ require_once BASE_PATH . 'includes/header.php';
                 <span>Active<br>Routings</span>
             </div>
         </div>
-
         <div class="custom-card card-closed">
             <div class="card-number"><?= number_format($total_users) ?></div>
             <div class="card-info">
@@ -113,7 +108,6 @@ require_once BASE_PATH . 'includes/header.php';
                 <span>Active<br>System Users</span>
             </div>
         </div>
-
         <div class="custom-card card-onhand">
             <div class="card-number"><?= number_format($total_divisions) ?></div>
             <div class="card-info">
@@ -122,7 +116,6 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
     </div>
-
     <div class="row g-4">
         <div class="col-md-6">
             <div class="chart-container">
@@ -130,7 +123,6 @@ require_once BASE_PATH . 'includes/header.php';
                 <canvas id="statusChart"></canvas>
             </div>
         </div>
-
         <div class="col-md-6">
             <div class="chart-container">
                 <h6 class="fw-bold mb-3 text-secondary text-center">System Users per Division</h6>
@@ -139,70 +131,68 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
 
-    // Pass PHP arrays safely to JavaScript
-    const statusLabels = <?= json_encode($statusLabels) ?>;
-    const statusCounts = <?= json_encode($statusCounts) ?>;
+        // Pass PHP arrays safely to JavaScript
+        const statusLabels = <?= json_encode($statusLabels) ?>;
+        const statusCounts = <?= json_encode($statusCounts) ?>;
 
-    const divLabels = <?= json_encode($divLabels) ?>;
-    const divCounts = <?= json_encode($divCounts) ?>;
+        const divLabels = <?= json_encode($divLabels) ?>;
+        const divCounts = <?= json_encode($divCounts) ?>;
 
-    // 1. Status Doughnut Chart
-    const ctxStatus = document.getElementById('statusChart').getContext('2d');
-    new Chart(ctxStatus, {
-        type: 'doughnut',
-        data: {
-            labels: statusLabels,
-            datasets: [{
-                data: statusCounts,
-                backgroundColor: [
-                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'
-                ],
-                borderWidth: 0,
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
+        // 1. Status Doughnut Chart
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusCounts,
+                    backgroundColor: [
+                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
             },
-            cutout: '70%' // Makes the doughnut thinner and modern
-        }
-    });
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                cutout: '70%' // Makes the doughnut thinner and modern
+            }
+        });
 
-    // 2. Division Bar Chart
-    const ctxDiv = document.getElementById('divisionChart').getContext('2d');
-    new Chart(ctxDiv, {
-        type: 'bar',
-        data: {
-            labels: divLabels,
-            datasets: [{
-                label: 'Total Users',
-                data: divCounts,
-                backgroundColor: '#263D81',
-                borderRadius: 4 // Rounds the top of the bars
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false } // Hide legend for single dataset
+        // 2. Division Bar Chart
+        const ctxDiv = document.getElementById('divisionChart').getContext('2d');
+        new Chart(ctxDiv, {
+            type: 'bar',
+            data: {
+                labels: divLabels,
+                datasets: [{
+                    label: 'Total Users',
+                    data: divCounts,
+                    backgroundColor: '#263D81',
+                    borderRadius: 4 // Rounds the top of the bars
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1 } // Ensure it counts by whole numbers
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false } // Hide legend for single dataset
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 } // Ensure it counts by whole numbers
+                    }
                 }
             }
-        }
+        });
     });
-});
 </script>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

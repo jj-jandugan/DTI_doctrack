@@ -17,14 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->beginTransaction();
 
         $classification_id = $_POST['classification'];
-        $document_type_id  = $_POST['document_type'];
-        $due_date          = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
-        $subject           = trim($_POST['subject']);
-        $particulars       = trim($_POST['particulars'] ?? '');
-        $signatory_id      = $_POST['signatory'];
-        $origin_id         = $docManager->findOrCreateOrigin(trim($_POST['origin_office']));
-        $sender_name       = trim($_POST['sender_name']);
-        $route_type        = $_POST['route_type'];
+        $document_type_id = $_POST['document_type'];
+        $due_date = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+        $subject = trim($_POST['subject']);
+        $particulars = trim($_POST['particulars'] ?? '');
+        $signatory_id = $_POST['signatory'];
+        $origin_id = $docManager->findOrCreateOrigin(trim($_POST['origin_office']));
+        $sender_name = trim($_POST['sender_name']);
+        $route_type = $_POST['route_type'];
 
         // Get Status ID for FOR-APPROVAL
         $status_id = $pdo->query("SELECT id FROM records_status WHERE category = 'FOR-APPROVAL' LIMIT 1")->fetchColumn();
@@ -72,7 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // --- HANDLE RECIPIENTS ---
         if ($route_type === 'division' && !empty($_POST['route_users'])) {
             $stmtRec = $pdo->prepare("INSERT INTO records_documentrecipient (document_id, recipient_user_id, has_received) VALUES (?, ?, 0)");
-            foreach ($_POST['route_users'] as $uid) { $stmtRec->execute([$document_id, $uid]); }
+            foreach ($_POST['route_users'] as $uid) {
+                $stmtRec->execute([$document_id, $uid]);
+            }
         }
 
         // --- HANDLE ATTACHMENTS ---

@@ -15,9 +15,9 @@ $docManager = new DocumentManager($pdo);
 
 // FETCH DATA VIA CLASS
 try {
-    $doc_types       = $docManager->getDocumentTypes();
+    $doc_types = $docManager->getDocumentTypes();
     $classifications = $docManager->getClassifications();
-    $history_docs    = $docManager->getSignatoryHistory($user_id);
+    $history_docs = $docManager->getSignatoryHistory($user_id);
     $all_attachments = $docManager->getAllAttachmentsGrouped();
 } catch (PDOException $e) {
     $error_msg = "Error loading history: " . $e->getMessage();
@@ -40,25 +40,23 @@ $extra_js = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="text-dark fw-bold mb-0">Document History</h2>
             <p class="text-secondary">View finalized documents you have originated, signed, or processed.</p>
         </div>
     </div>
-
     <?php if (isset($error_msg)): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-danger"><i
+                class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
     <?php endif; ?>
-
     <!-- FILTER BAR -->
     <div class="filter-bar mb-4">
         <div class="input-group search-container me-2">
             <span class="input-group-text search-icon-group"><i class="fa-solid fa-magnifying-glass"></i></span>
-            <input type="text" id="searchInput" class="form-control custom-search-input" placeholder="Search DTS No. or Subject...">
+            <input type="text" id="searchInput" class="form-control custom-search-input"
+                placeholder="Search DTS No. or Subject...">
         </div>
         <span class="filter-label">Filter by</span>
         <select id="directionFilter" class="form-select custom-select">
@@ -85,7 +83,6 @@ require_once BASE_PATH . 'includes/header.php';
             <input type="date" id="endDate" class="form-control form-control-sm border-0">
         </div>
     </div>
-
     <div class="split-layout-container">
         <div class="table-section">
             <div class="table-container p-0">
@@ -105,38 +102,40 @@ require_once BASE_PATH . 'includes/header.php';
                         </thead>
                         <tbody>
                             <?php if (empty($history_docs)): ?>
-                                <tr><td colspan="8" class="text-center py-5 text-muted">No finalized documents found.</td></tr>
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted">No finalized documents found.</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($history_docs as $doc):
                                     $json_attachments = json_encode($all_attachments[$doc['id']] ?? []);
-                                ?>
-                                <tr class="history-row clickable-row"
-                                    data-dts="<?= htmlspecialchars($doc['dts_no']) ?>"
-                                    data-status="<?= htmlspecialchars($doc['status_name']) ?>"
-                                    data-statusclass="status <?= strtolower($doc['status_category']) ?>"
-                                    data-deadline="<?= $doc['due_date'] ? date('M d, Y', strtotime($doc['due_date'])) : 'No Deadline' ?>"
-                                    data-created="<?= date('M d, Y h:i A', strtotime($doc['created_at'])) ?>"
-                                    data-approved="<?= date('M d, Y h:i A', strtotime($doc['updated_at'])) ?>"
-                                    data-subject="<?= htmlspecialchars($doc['subject']) ?>"
-                                    data-particulars="<?= htmlspecialchars($doc['particulars'] ?? '') ?>"
-                                    data-address="<?= htmlspecialchars($doc['address_name'] ?? 'N/A') ?>"
-                                    data-creator="<?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?>"
-                                    data-creatordiv="<?= htmlspecialchars($doc['c_division'] ?? 'System User') ?>"
-                                    data-direction="<?= strtolower($doc['doc_direction']) ?>"
-                                    data-attachments='<?= htmlspecialchars($json_attachments, ENT_QUOTES, 'UTF-8') ?>'>
-
-                                    <td class="fw-bold text-primary search-target"><?= $doc['dts_no'] ?></td>
-                                    <td><span class="status <?= strtolower($doc['status_category']) ?>"><?= $doc['status_name'] ?></span></td>
-                                    <td><?= $doc['due_date'] ? date('M d, Y', strtotime($doc['due_date'])) : 'None' ?></td>
-                                    <td><?= date('M d, Y', strtotime($doc['created_at'])) ?></td>
-                                    <td><?= date('M d, Y', strtotime($doc['updated_at'])) ?></td>
-                                    <td class="fw-bold text-dark text-truncate search-target"><?= $doc['subject'] ?></td>
-                                    <td class="text-truncate"><?= $doc['address_name'] ?? '---' ?></td>
-                                    <td><span class="small"><?= $doc['c_fname'] ?></span></td>
-                                    <td class="d-none type-target"><?= $doc['doc_type'] ?></td>
-                                    <td class="d-none class-target"><?= $doc['classification'] ?></td>
-                                    <td class="d-none direction-target"><?= strtolower($doc['doc_direction']) ?></td>
-                                </tr>
+                                    ?>
+                                    <tr class="history-row clickable-row" data-dts="<?= htmlspecialchars($doc['dts_no']) ?>"
+                                        data-status="<?= htmlspecialchars($doc['status_name']) ?>"
+                                        data-statusclass="status <?= strtolower($doc['status_category']) ?>"
+                                        data-deadline="<?= $doc['due_date'] ? date('M d, Y', strtotime($doc['due_date'])) : 'No Deadline' ?>"
+                                        data-created="<?= date('M d, Y h:i A', strtotime($doc['created_at'])) ?>"
+                                        data-approved="<?= date('M d, Y h:i A', strtotime($doc['updated_at'])) ?>"
+                                        data-subject="<?= htmlspecialchars($doc['subject']) ?>"
+                                        data-particulars="<?= htmlspecialchars($doc['particulars'] ?? '') ?>"
+                                        data-address="<?= htmlspecialchars($doc['address_name'] ?? 'N/A') ?>"
+                                        data-creator="<?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?>"
+                                        data-creatordiv="<?= htmlspecialchars($doc['c_division'] ?? 'System User') ?>"
+                                        data-direction="<?= strtolower($doc['doc_direction']) ?>"
+                                        data-attachments='<?= htmlspecialchars($json_attachments, ENT_QUOTES, 'UTF-8') ?>'>
+                                        <td class="fw-bold text-primary search-target"><?= $doc['dts_no'] ?></td>
+                                        <td><span
+                                                class="status <?= strtolower($doc['status_category']) ?>"><?= $doc['status_name'] ?></span>
+                                        </td>
+                                        <td><?= $doc['due_date'] ? date('M d, Y', strtotime($doc['due_date'])) : 'None' ?></td>
+                                        <td><?= date('M d, Y', strtotime($doc['created_at'])) ?></td>
+                                        <td><?= date('M d, Y', strtotime($doc['updated_at'])) ?></td>
+                                        <td class="fw-bold text-dark text-truncate search-target"><?= $doc['subject'] ?></td>
+                                        <td class="text-truncate"><?= $doc['address_name'] ?? '---' ?></td>
+                                        <td><span class="small"><?= $doc['c_fname'] ?></span></td>
+                                        <td class="d-none type-target"><?= $doc['doc_type'] ?></td>
+                                        <td class="d-none class-target"><?= $doc['classification'] ?></td>
+                                        <td class="d-none direction-target"><?= strtolower($doc['doc_direction']) ?></td>
+                                    </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>
@@ -144,7 +143,6 @@ require_once BASE_PATH . 'includes/header.php';
                 </div>
             </div>
         </div>
-
         <div class="side-panel-section" id="sidePanel">
             <div class="side-panel-header">
                 <div>
@@ -164,7 +162,10 @@ require_once BASE_PATH . 'includes/header.php';
                         <div class="panel-value fw-bold text-success" id="paneApproved"></div>
                     </div>
                 </div>
-                <div class="panel-group"><div class="panel-label">SUBJECT</div><div class="textarea-style fw-bold text-dark" id="paneSubject"></div></div>
+                <div class="panel-group">
+                    <div class="panel-label">SUBJECT</div>
+                    <div class="textarea-style fw-bold text-dark" id="paneSubject"></div>
+                </div>
                 <div class="panel-group border-top pt-3 mt-3">
                     <div class="panel-label mb-2"><i class="fa-solid fa-paperclip me-1"></i> ATTACHMENTS</div>
                     <div id="paneAttachments"></div>
@@ -173,5 +174,4 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

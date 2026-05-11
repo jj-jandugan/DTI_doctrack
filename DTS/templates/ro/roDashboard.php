@@ -76,8 +76,8 @@ $monthly_data = $stmtMonthly->fetchAll(PDO::FETCH_ASSOC);
 
 $monthly_counts = array_fill(0, 12, 0);
 foreach ($monthly_data as $row) {
-    $month_index = (int)$row['month_num'] - 1;
-    $monthly_counts[$month_index] = (int)$row['doc_count'];
+    $month_index = (int) $row['month_num'] - 1;
+    $monthly_counts[$month_index] = (int) $row['doc_count'];
 }
 
 // Fetch Recent Dispatch Table[cite: 1]
@@ -112,14 +112,12 @@ $js_metrics = [
 ];
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner">
+?> <div class="dashboard-inner">
     <div class="rd-profile-header mb-4">
-        <h2 class="fw-bold text-dark mb-0"><?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
+        <h2 class="fw-bold text-dark mb-0">
+            <?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
         <p class="text-secondary fs-5 mt-1"><?= htmlspecialchars($formal_title) ?></p>
     </div>
-
     <!-- Cards Grid -->
     <div class="cards-grid mb-5">
         <div class="custom-card card-incoming">
@@ -147,7 +145,6 @@ require_once BASE_PATH . 'includes/header.php';
             <div class="card-info"><i class="fa-solid fa-check-double me-2"></i> Closed / Released</div>
         </div>
     </div>
-
     <!-- Graphs -->
     <div class="row mb-5">
         <div class="col-lg-5 mb-4">
@@ -167,7 +164,6 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
     </div>
-
     <!-- Recent Dispatch Table[cite: 1] -->
     <div class="mt-5">
         <h4 class="mb-3 fw-bold table-main-title">Ready for Dispatch:</h4>
@@ -192,35 +188,44 @@ require_once BASE_PATH . 'includes/header.php';
                                 <td colspan="8" class="text-center text-muted py-5">
                                     <i class="fa-solid fa-folder-open mb-3 opacity-25" style="font-size: 3rem;"></i>
                                     <h6 class="fw-bold text-secondary">Queue is Empty</h6>
-                                    <p class="small mb-0">No approved documents are waiting to be dispatched at this time.</p>
+                                    <p class="small mb-0">No approved documents are waiting to be dispatched at this time.
+                                    </p>
                                 </td>
                             </tr>
                         <?php else: ?>
-                            <?php foreach($recent_dispatch as $doc): ?>
-                            <tr class="clickable-row" onclick="window.location.href='roOutgoing.php'">
-                                <td class="fw-bold text-primary"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                                <td><span class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span></td>
-                                <td>
-                                    <?php if ($doc['due_date']): ?>
-                                        <span class="text-dark"><i class="fa-regular fa-calendar-xmark me-1"></i> <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
-                                    <?php else: ?>
-                                        <span class="text-muted">None</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?= date('M d, Y', strtotime($doc['updated_at'])) ?></td>
-                                <td class="text-muted small"><?= date('h:i A', strtotime($doc['updated_at'])) ?></td>
-                                <td class="fw-bold text-dark text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($doc['subject']) ?>"><?= htmlspecialchars($doc['subject']) ?></td>
-                                <td><span class="fw-bold text-success"><i class="fa-solid fa-paper-plane me-1"></i> <?= htmlspecialchars($doc['address_name'] ?? 'External Agency') ?></span></td>
-                                <td>
-                                    <div class="creator-cell m-0 p-0 bg-transparent border-0">
-                                        <div class="creator-avatar sm"><i class="fa-solid fa-building"></i></div>
-                                        <div class="creator-info">
-                                            <span class="creator-name small"><?= htmlspecialchars($doc['c_division'] ?? 'Division') ?></span>
-                                            <span class="creator-role smaller"><?= htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']) ?></span>
+                            <?php foreach ($recent_dispatch as $doc): ?>
+                                <tr class="clickable-row" onclick="window.location.href='roOutgoing.php'">
+                                    <td class="fw-bold text-primary"><?= htmlspecialchars($doc['dts_no']) ?></td>
+                                    <td><span
+                                            class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($doc['due_date']): ?>
+                                            <span class="text-dark"><i class="fa-regular fa-calendar-xmark me-1"></i>
+                                                <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">None</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= date('M d, Y', strtotime($doc['updated_at'])) ?></td>
+                                    <td class="text-muted small"><?= date('h:i A', strtotime($doc['updated_at'])) ?></td>
+                                    <td class="fw-bold text-dark text-truncate" style="max-width: 250px;"
+                                        title="<?= htmlspecialchars($doc['subject']) ?>">
+                                        <?= htmlspecialchars($doc['subject']) ?></td>
+                                    <td><span class="fw-bold text-success"><i class="fa-solid fa-paper-plane me-1"></i>
+                                            <?= htmlspecialchars($doc['address_name'] ?? 'External Agency') ?></span></td>
+                                    <td>
+                                        <div class="creator-cell m-0 p-0 bg-transparent border-0">
+                                            <div class="creator-avatar sm"><i class="fa-solid fa-building"></i></div>
+                                            <div class="creator-info">
+                                                <span
+                                                    class="creator-name small"><?= htmlspecialchars($doc['c_division'] ?? 'Division') ?></span>
+                                                <span
+                                                    class="creator-role smaller"><?= htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']) ?></span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
@@ -229,10 +234,8 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <!-- Data Bridge for JS[cite: 5] -->
 <script> const dashboardData = <?= json_encode($js_metrics) ?>; </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?= BASE_URL ?>static/js/dashboard.js"></script>
-
 <?php require_once BASE_PATH . 'includes/header.php'; ?>

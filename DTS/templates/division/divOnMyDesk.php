@@ -102,7 +102,7 @@ try {
 
         $all_attachments[$row['document_id']][] = [
             'name' => basename($row['file_path']),
-            'url'  => BASE_URL . $row['file_path'],
+            'url' => BASE_URL . $row['file_path'],
             'size' => $filesize
         ];
     }
@@ -117,52 +117,49 @@ $extra_js = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="mb-4">
         <h2 class="text-dark fw-bold mb-0">On My Desk</h2>
         <p class="text-secondary">Review and accept active documents routed to you.</p>
     </div>
-
     <?php if ($success_msg): ?>
-        <div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?></div>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?>
+        </div>
     <?php endif; ?>
     <?php if ($error_msg): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-danger"><i
+                class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
     <?php endif; ?>
-
     <!-- BULLETPROOF INLINE FILTER BAR (Original Order Restored)[cite: 1] -->
-    <div class="filter-bar d-flex flex-nowrap align-items-center gap-3 mb-4 w-100" style="overflow-x: auto; padding-bottom: 5px;">
+    <div class="filter-bar d-flex flex-nowrap align-items-center gap-3 mb-4 w-100"
+        style="overflow-x: auto; padding-bottom: 5px;">
         <span class="text-muted fw-bold small text-nowrap flex-shrink-0">Filter by</span>
-
         <div class="input-group search-container flex-shrink-0 m-0" style="width: 250px;">
             <span class="input-group-text search-icon-group"><i class="fa-solid fa-magnifying-glass"></i></span>
-            <input type="text" id="searchInput" class="form-control custom-search-input" placeholder="Search DTS No. or Subject...">
+            <input type="text" id="searchInput" class="form-control custom-search-input"
+                placeholder="Search DTS No. or Subject...">
         </div>
-
         <select id="typeFilter" class="form-select custom-select flex-shrink-0" style="width: 160px;">
             <option value="">Document Type</option>
             <?php foreach ($doc_types as $type): ?>
                 <option value="<?= htmlspecialchars($type['name']) ?>"><?= htmlspecialchars($type['name']) ?></option>
             <?php endforeach; ?>
         </select>
-
         <select id="classFilter" class="form-select custom-select flex-shrink-0" style="width: 160px;">
             <option value="">Classification</option>
             <?php foreach ($classifications as $class): ?>
                 <option value="<?= htmlspecialchars($class['name']) ?>"><?= htmlspecialchars($class['name']) ?></option>
             <?php endforeach; ?>
         </select>
-
         <div class="d-flex align-items-center gap-2 border px-2 py-1 rounded bg-white flex-shrink-0">
             <span class="text-muted small text-nowrap">From:</span>
-            <input type="date" id="startDate" class="form-control form-control-sm border-0 text-secondary" style="width: 110px;">
+            <input type="date" id="startDate" class="form-control form-control-sm border-0 text-secondary"
+                style="width: 110px;">
             <span class="text-muted small text-nowrap">To:</span>
-            <input type="date" id="endDate" class="form-control form-control-sm border-0 text-secondary" style="width: 110px;">
+            <input type="date" id="endDate" class="form-control form-control-sm border-0 text-secondary"
+                style="width: 110px;">
         </div>
     </div>
-
     <div class="table-container p-0">
         <div class="table-responsive">
             <table class="data-table" id="deskTable">
@@ -187,66 +184,68 @@ require_once BASE_PATH . 'includes/header.php';
                         }
                         $doc_attachments = isset($all_attachments[$doc['id']]) ? $all_attachments[$doc['id']] : [];
                         $json_attachments = json_encode($doc_attachments);
-                    ?>
-                    <tr class="desk-row clickable-row"
-                        data-bs-toggle="modal"
-                        data-bs-target="#documentModal"
-                        data-id="<?= $doc['id'] ?>"
-                        data-dts="<?= htmlspecialchars($doc['dts_no']) ?>"
-                        data-subject="<?= htmlspecialchars($doc['subject']) ?>"
-                        data-particulars="<?= htmlspecialchars($doc['particulars'] ?? 'No additional details provided.') ?>"
-                        data-type="<?= htmlspecialchars($doc['doc_type']) ?>"
-                        data-class="<?= htmlspecialchars($doc['classification']) ?>"
-                        data-status="<?= htmlspecialchars($doc['status_name']) ?>"
-                        data-statuscat="<?= htmlspecialchars(strtolower($doc['status_category'])) ?>"
-                        data-origin="<?= htmlspecialchars($doc['origin_name'] ?? 'N/A') ?>"
-                        data-address="<?= htmlspecialchars($doc['address_name'] ?? 'N/A') ?>"
-                        data-sender="<?= htmlspecialchars($doc['sender'] ?? 'N/A') ?>"
-                        data-creator="<?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?>"
-                        data-creator-div="<?= htmlspecialchars($doc['c_division'] ?? 'System User') ?>"
-                        data-deadline="<?= $doc['due_date'] ? date('F d, Y', strtotime($doc['due_date'])) : 'None' ?>"
-                        data-isoverdue="<?= $is_overdue ? 'true' : 'false' ?>"
-                        data-attachments='<?= htmlspecialchars($json_attachments, ENT_QUOTES, 'UTF-8') ?>'>
-
-                        <!-- DTS AND SUBJECT SEPARATED -->
-                        <td class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                        <td class="fw-bold text-dark search-target"><?= htmlspecialchars($doc['subject']) ?></td>
-
-                        <td class="type-target"><?= htmlspecialchars($doc['doc_type']) ?></td>
-                        <td class="class-target"><span class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($doc['classification']) ?></span></td>
-                        <td>
-                            <?php if ($doc['due_date']): ?>
-                                <span class="<?= $is_overdue ? 'text-danger fw-bold' : 'text-dark' ?>">
-                                    <i class="fa-regular fa-calendar-xmark me-1"></i> <?= date('M d, Y', strtotime($doc['due_date'])) ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="text-muted">None</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($is_overdue): ?>
-                                <span class="status overdue">OVER DUE</span>
-                            <?php else: ?>
-                                <span class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <div class="text-dark fw-bold"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
-                            <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
-                            <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
-                        </td>
-                        <td class="search-target">
-                            <div class="creator-cell">
-                                <div class="creator-avatar sm"><i class="fa-solid fa-user"></i></div>
-                                <div class="creator-info">
-                                    <span class="creator-name small"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
-                                    <span class="creator-role smaller"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
+                        ?>
+                        <tr class="desk-row clickable-row" data-bs-toggle="modal" data-bs-target="#documentModal"
+                            data-id="<?= $doc['id'] ?>" data-dts="<?= htmlspecialchars($doc['dts_no']) ?>"
+                            data-subject="<?= htmlspecialchars($doc['subject']) ?>"
+                            data-particulars="<?= htmlspecialchars($doc['particulars'] ?? 'No additional details provided.') ?>"
+                            data-type="<?= htmlspecialchars($doc['doc_type']) ?>"
+                            data-class="<?= htmlspecialchars($doc['classification']) ?>"
+                            data-status="<?= htmlspecialchars($doc['status_name']) ?>"
+                            data-statuscat="<?= htmlspecialchars(strtolower($doc['status_category'])) ?>"
+                            data-origin="<?= htmlspecialchars($doc['origin_name'] ?? 'N/A') ?>"
+                            data-address="<?= htmlspecialchars($doc['address_name'] ?? 'N/A') ?>"
+                            data-sender="<?= htmlspecialchars($doc['sender'] ?? 'N/A') ?>"
+                            data-creator="<?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?>"
+                            data-creator-div="<?= htmlspecialchars($doc['c_division'] ?? 'System User') ?>"
+                            data-deadline="<?= $doc['due_date'] ? date('F d, Y', strtotime($doc['due_date'])) : 'None' ?>"
+                            data-isoverdue="<?= $is_overdue ? 'true' : 'false' ?>"
+                            data-attachments='<?= htmlspecialchars($json_attachments, ENT_QUOTES, 'UTF-8') ?>'>
+                            <!-- DTS AND SUBJECT SEPARATED -->
+                            <td class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></td>
+                            <td class="fw-bold text-dark search-target"><?= htmlspecialchars($doc['subject']) ?></td>
+                            <td class="type-target"><?= htmlspecialchars($doc['doc_type']) ?></td>
+                            <td class="class-target"><span
+                                    class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($doc['classification']) ?></span>
+                            </td>
+                            <td>
+                                <?php if ($doc['due_date']): ?>
+                                    <span class="<?= $is_overdue ? 'text-danger fw-bold' : 'text-dark' ?>">
+                                        <i class="fa-regular fa-calendar-xmark me-1"></i>
+                                        <?= date('M d, Y', strtotime($doc['due_date'])) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted">None</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($is_overdue): ?>
+                                    <span class="status overdue">OVER DUE</span>
+                                <?php else: ?>
+                                    <span
+                                        class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div class="text-dark fw-bold"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    <?= date('h:i A', strtotime($doc['created_at'])) ?>
                                 </div>
-                            </div>
-                        </td>
-                    </tr>
+                                <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
+                            </td>
+                            <td class="search-target">
+                                <div class="creator-cell">
+                                    <div class="creator-avatar sm"><i class="fa-solid fa-user"></i></div>
+                                    <div class="creator-info">
+                                        <span
+                                            class="creator-name small"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
+                                        <span
+                                            class="creator-role smaller"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
-
                     <?php if (empty($desk_docs)): ?>
                         <tr>
                             <td colspan="8" class="text-center text-muted py-5">
@@ -261,7 +260,6 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <!-- DOCUMENT MODAL utilizing modal.css classes -->
 <div class="modal fade" id="documentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -272,18 +270,19 @@ require_once BASE_PATH . 'includes/header.php';
                 </h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body px-4 py-4">
                 <div class="row">
                     <!-- Left Column -->
                     <div class="col-md-5 border-end pe-4">
                         <div class="mb-3 data-group">
                             <label class="modal-label">DTS NO.</label>
-                            <div class="data-value fw-bold text-primary" id="modalDTS" style="background: transparent; border: none; padding: 0;"></div>
+                            <div class="data-value fw-bold text-primary" id="modalDTS"
+                                style="background: transparent; border: none; padding: 0;"></div>
                         </div>
                         <div class="mb-3 data-group">
                             <label class="modal-label">DOCUMENT TYPE</label>
-                            <div class="data-value fw-bold text-dark" id="modalType" style="background: transparent; border: none; padding: 0;"></div>
+                            <div class="data-value fw-bold text-dark" id="modalType"
+                                style="background: transparent; border: none; padding: 0;"></div>
                         </div>
                         <div class="mb-3 data-group">
                             <label class="modal-label">CLASSIFICATION</label>
@@ -299,15 +298,18 @@ require_once BASE_PATH . 'includes/header.php';
                         </div>
                         <div class="mb-3 data-group">
                             <label class="modal-label">ORIGIN</label>
-                            <div class="data-value" id="modalOrigin" style="background: transparent; border: none; padding: 0;"></div>
+                            <div class="data-value" id="modalOrigin"
+                                style="background: transparent; border: none; padding: 0;"></div>
                         </div>
                         <div class="mb-3 data-group">
                             <label class="modal-label">ADDRESS</label>
-                            <div class="data-value" id="modalAddress" style="background: transparent; border: none; padding: 0;"></div>
+                            <div class="data-value" id="modalAddress"
+                                style="background: transparent; border: none; padding: 0;"></div>
                         </div>
                         <div class="mb-3 data-group">
                             <label class="modal-label">ROUTED FROM (Sender)</label>
-                            <div class="data-value" id="modalSender" style="background: transparent; border: none; padding: 0;"></div>
+                            <div class="data-value" id="modalSender"
+                                style="background: transparent; border: none; padding: 0;"></div>
                         </div>
                         <div class="mb-2 data-group">
                             <label class="modal-label">CREATED BY</label>
@@ -320,7 +322,6 @@ require_once BASE_PATH . 'includes/header.php';
                             </div>
                         </div>
                     </div>
-
                     <!-- Right Column -->
                     <div class="col-md-7 ps-4">
                         <div class="mb-4 data-group">
@@ -329,105 +330,101 @@ require_once BASE_PATH . 'includes/header.php';
                         </div>
                         <div class="mb-4 data-group">
                             <label class="modal-label">PARTICULARS</label>
-                            <div class="data-value" id="modalParticulars" style="min-height: 100px; white-space: pre-wrap;"></div>
+                            <div class="data-value" id="modalParticulars"
+                                style="min-height: 100px; white-space: pre-wrap;"></div>
                         </div>
-
                         <div class="mb-2 data-group">
-                            <label class="modal-label mb-3"><i class="fa-solid fa-paperclip me-1"></i> ATTACHED FILES</label>
+                            <label class="modal-label mb-3"><i class="fa-solid fa-paperclip me-1"></i> ATTACHED
+                                FILES</label>
                             <div id="modalAttachments"></div>
                         </div>
                     </div>
                 </div>
-
                 <form method="POST" action="divOnMyDesk.php">
                     <input type="hidden" name="action" value="accept_document">
                     <input type="hidden" name="document_id" id="modalDocId">
-
                     <div class="d-flex justify-content-end gap-2 border-top pt-4 mt-3">
                         <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Close Window</button>
-                        <button type="submit" class="btn btn-blue px-4" onclick="return confirm('Are you sure you want to Accept this document? It will be marked as CLOSED and moved to your history.');">
-                            <i class="fa-solid fa-check-double me-2"></i> Accept & Close Document
-                        </button>
+                        <button type="submit" class="btn btn-blue px-4"
+                            onclick="return confirm('Are you sure you want to Accept this document? It will be marked as CLOSED and moved to your history.');">
+                            <i class="fa-solid fa-check-double me-2"></i> Accept & Close Document </button>
                     </div>
                 </form>
-
             </div>
         </div>
     </div>
 </div>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Initialize Universal Filters
-    if (typeof TableFilter !== 'undefined') {
-        new TableFilter('.desk-row');
-    }
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Initialize Universal Filters
+        if (typeof TableFilter !== 'undefined') {
+            new TableFilter('.desk-row');
+        }
 
-    // 2. Modal Population Logic
-    const documentModal = document.getElementById('documentModal');
-    if (documentModal) {
-        documentModal.addEventListener('show.bs.modal', function (event) {
-            const row = event.relatedTarget;
-            document.getElementById('modalDocId').value = row.dataset.id;
+        // 2. Modal Population Logic
+        const documentModal = document.getElementById('documentModal');
+        if (documentModal) {
+            documentModal.addEventListener('show.bs.modal', function (event) {
+                const row = event.relatedTarget;
+                document.getElementById('modalDocId').value = row.dataset.id;
 
-            // Left Column
-            document.getElementById('modalDTS').textContent = row.dataset.dts;
-            document.getElementById('modalType').textContent = row.dataset.type;
-            document.getElementById('modalClass').textContent = row.dataset.class;
+                // Left Column
+                document.getElementById('modalDTS').textContent = row.dataset.dts;
+                document.getElementById('modalType').textContent = row.dataset.type;
+                document.getElementById('modalClass').textContent = row.dataset.class;
 
-            const statusEl = document.getElementById('modalStatus');
-            const isOverdue = row.dataset.isoverdue === 'true';
-            if(isOverdue) {
-                statusEl.textContent = 'OVER DUE';
-                statusEl.className = 'status overdue';
-            } else {
-                statusEl.textContent = row.dataset.status;
-                statusEl.className = 'status ' + row.dataset.statuscat;
-            }
+                const statusEl = document.getElementById('modalStatus');
+                const isOverdue = row.dataset.isoverdue === 'true';
+                if (isOverdue) {
+                    statusEl.textContent = 'OVER DUE';
+                    statusEl.className = 'status overdue';
+                } else {
+                    statusEl.textContent = row.dataset.status;
+                    statusEl.className = 'status ' + row.dataset.statuscat;
+                }
 
-            const deadlineVal = row.dataset.deadline;
-            const deadlineContainer = document.getElementById('modalDeadlineContainer');
-            if (deadlineVal === 'None') {
-                deadlineContainer.innerHTML = '<span class="text-muted small">None</span>';
-            } else {
-                deadlineContainer.innerHTML = `<span class="${isOverdue ? 'text-danger fw-bold' : 'text-dark fw-bold'}"><i class="fa-regular fa-calendar-xmark me-1"></i> ${deadlineVal}</span>`;
-            }
+                const deadlineVal = row.dataset.deadline;
+                const deadlineContainer = document.getElementById('modalDeadlineContainer');
+                if (deadlineVal === 'None') {
+                    deadlineContainer.innerHTML = '<span class="text-muted small">None</span>';
+                } else {
+                    deadlineContainer.innerHTML = `<span class="${isOverdue ? 'text-danger fw-bold' : 'text-dark fw-bold'}"><i class="fa-regular fa-calendar-xmark me-1"></i> ${deadlineVal}</span>`;
+                }
 
-            document.getElementById('modalOrigin').textContent = row.dataset.origin;
-            document.getElementById('modalAddress').textContent = row.dataset.address;
-            document.getElementById('modalSender').textContent = row.dataset.sender;
-            document.getElementById('modalCreator').textContent = row.dataset.creator;
-            document.getElementById('modalCreatorDiv').textContent = row.dataset.creator_div;
+                document.getElementById('modalOrigin').textContent = row.dataset.origin;
+                document.getElementById('modalAddress').textContent = row.dataset.address;
+                document.getElementById('modalSender').textContent = row.dataset.sender;
+                document.getElementById('modalCreator').textContent = row.dataset.creator;
+                document.getElementById('modalCreatorDiv').textContent = row.dataset.creator_div;
 
-            // Right Column
-            document.getElementById('modalSubject').textContent = row.dataset.subject;
-            document.getElementById('modalParticulars').textContent = row.dataset.particulars;
+                // Right Column
+                document.getElementById('modalSubject').textContent = row.dataset.subject;
+                document.getElementById('modalParticulars').textContent = row.dataset.particulars;
 
-            // Attachments
-            const attachmentsDiv = document.getElementById('modalAttachments');
-            attachmentsDiv.innerHTML = '';
-            const rawAttachments = row.dataset.attachments;
-            if (rawAttachments) {
-                const attachmentsArray = JSON.parse(rawAttachments);
-                if (attachmentsArray.length > 0) {
-                    attachmentsArray.forEach(file => {
-                        const link = document.createElement('a');
-                        link.href = file.url;
-                        link.target = '_blank';
-                        link.className = 'd-flex justify-content-between align-items-center p-3 bg-white border rounded mb-2 text-decoration-none';
-                        link.innerHTML = `
+                // Attachments
+                const attachmentsDiv = document.getElementById('modalAttachments');
+                attachmentsDiv.innerHTML = '';
+                const rawAttachments = row.dataset.attachments;
+                if (rawAttachments) {
+                    const attachmentsArray = JSON.parse(rawAttachments);
+                    if (attachmentsArray.length > 0) {
+                        attachmentsArray.forEach(file => {
+                            const link = document.createElement('a');
+                            link.href = file.url;
+                            link.target = '_blank';
+                            link.className = 'd-flex justify-content-between align-items-center p-3 bg-white border rounded mb-2 text-decoration-none';
+                            link.innerHTML = `
                             <div><i class='fa-regular fa-file-pdf me-2 text-danger'></i> <span class='text-dark fw-bold small'>${file.name}</span></div>
                             <div class='text-muted small'>${file.size}</div>
                         `;
-                        attachmentsDiv.appendChild(link);
-                    });
-                } else {
-                    attachmentsDiv.innerHTML = '<span class="text-muted fst-italic small">No files attached to this document.</span>';
+                            attachmentsDiv.appendChild(link);
+                        });
+                    } else {
+                        attachmentsDiv.innerHTML = '<span class="text-muted fst-italic small">No files attached to this document.</span>';
+                    }
                 }
-            }
-        });
-    }
-});
+            });
+        }
+    });
 </script>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

@@ -67,18 +67,15 @@ try {
 }
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="text-dark fw-bold mb-0">System Archives</h2>
             <p class="text-secondary">A secure, read-only vault of all completed and closed documents.</p>
         </div>
-
         <div class="d-flex gap-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search DTS No. or Subject..." style="width: 250px;">
-
+            <input type="text" id="searchInput" class="form-control form-control-sm"
+                placeholder="Search DTS No. or Subject..." style="width: 250px;">
             <select id="yearFilter" class="form-select form-select-sm" style="width: 120px;">
                 <option value="">All Years</option>
                 <?php foreach ($available_years as $yr): ?>
@@ -87,11 +84,10 @@ require_once BASE_PATH . 'includes/header.php';
             </select>
         </div>
     </div>
-
     <?php if (isset($error_msg)): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-danger"><i
+                class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
     <?php endif; ?>
-
     <div class="table-container p-0">
         <div class="table-responsive">
             <table class="data-table" id="archivesTable">
@@ -108,54 +104,53 @@ require_once BASE_PATH . 'includes/header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($archives as $doc): ?>
-                    <tr class="archive-row">
-                        <td class="text-center"><i class="fa-solid fa-box-archive archive-icon"></i></td>
-
-                        <td><span class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></span></td>
-
-                        <td>
-                            <div class="fw-bold text-dark text-truncate search-target" style="max-width: 300px;" title="<?= htmlspecialchars($doc['subject']) ?>">
-                                <?= htmlspecialchars($doc['subject']) ?>
-                            </div>
-                            <div class="text-muted search-target" style="font-size: 0.8rem;">
-                                Created by: <?= htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']) ?>
-                            </div>
-                        </td>
-
-                        <td class="search-target">
-                            <span class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($doc['doc_type']) ?></span>
-                            <div class="text-muted mt-1" style="font-size: 0.75rem;"><?= htmlspecialchars($doc['classification']) ?></div>
-                        </td>
-
-                        <td>
-                            <div class="date-block">
-                                <strong><?= date('M d, Y', strtotime($doc['created_at'])) ?></strong>
-                                <?= date('h:i A', strtotime($doc['created_at'])) ?>
-                            </div>
-                        </td>
-
-                        <td class="year-target">
-                            <div class="date-block">
-                                <strong><?= date('M d, Y', strtotime($doc['updated_at'])) ?></strong>
-                                <?= date('h:i A', strtotime($doc['updated_at'])) ?>
-                            </div>
-                            <span class="d-none pure-year"><?= date('Y', strtotime($doc['updated_at'])) ?></span>
-                        </td>
-
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" title="View Document Details">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </td>
-                    </tr>
+                        <tr class="archive-row">
+                            <td class="text-center"><i class="fa-solid fa-box-archive archive-icon"></i></td>
+                            <td><span
+                                    class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark text-truncate search-target" style="max-width: 300px;"
+                                    title="<?= htmlspecialchars($doc['subject']) ?>">
+                                    <?= htmlspecialchars($doc['subject']) ?>
+                                </div>
+                                <div class="text-muted search-target" style="font-size: 0.8rem;"> Created by:
+                                    <?= htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']) ?>
+                                </div>
+                            </td>
+                            <td class="search-target">
+                                <span
+                                    class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($doc['doc_type']) ?></span>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                                    <?= htmlspecialchars($doc['classification']) ?></div>
+                            </td>
+                            <td>
+                                <div class="date-block">
+                                    <strong><?= date('M d, Y', strtotime($doc['created_at'])) ?></strong>
+                                    <?= date('h:i A', strtotime($doc['created_at'])) ?>
+                                </div>
+                            </td>
+                            <td class="year-target">
+                                <div class="date-block">
+                                    <strong><?= date('M d, Y', strtotime($doc['updated_at'])) ?></strong>
+                                    <?= date('h:i A', strtotime($doc['updated_at'])) ?>
+                                </div>
+                                <span class="d-none pure-year"><?= date('Y', strtotime($doc['updated_at'])) ?></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" title="View Document Details">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
-
-                    <?php if(empty($archives)): ?>
+                    <?php if (empty($archives)): ?>
                         <tr>
                             <td colspan="7" class="text-center text-muted py-5">
                                 <i class="fa-solid fa-box-open mb-3" style="font-size: 2.5rem; color: #cbd5e1;"></i><br>
                                 <h6 class="fw-bold text-secondary">The Archive is Empty</h6>
-                                <p style="font-size: 0.9rem;">Documents will automatically appear here once their routing status is marked as "CLOSED".</p>
+                                <p style="font-size: 0.9rem;">Documents will automatically appear here once their routing
+                                    status is marked as "CLOSED".</p>
                             </td>
                         </tr>
                     <?php endif; ?>
@@ -163,9 +158,7 @@ require_once BASE_PATH . 'includes/header.php';
             </table>
         </div>
     </div>
-</div>
-
-<?php
+</div> <?php
 $extra_js = "
 <script>
 document.addEventListener('DOMContentLoaded', function() {

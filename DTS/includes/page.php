@@ -18,7 +18,6 @@
             </li>
         </ul>
     </nav>
-    <div class="pagination-info mt-2">
-        Showing <span class="fw-bold">1</span> to <span class="fw-bold">20</span> of <span class="fw-bold">97</span> Results
-    </div>
+    <div class="pagination-info mt-2"> Showing <span class="fw-bold">1</span> to <span class="fw-bold">20</span> of
+        <span class="fw-bold">97</span> Results </div>
 </div>

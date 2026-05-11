@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmtStatus = $pdo->query("SELECT id FROM records_status WHERE category = 'CLOSED' LIMIT 1");
         $closed_status_id = $stmtStatus->fetchColumn();
 
-        if (empty($closed_status_id)) throw new Exception("Required 'CLOSED' status missing.");
+        if (empty($closed_status_id))
+            throw new Exception("Required 'CLOSED' status missing.");
 
         $stmtUpdateDoc = $pdo->prepare("UPDATE records_document SET status_id = ?, updated_at = NOW() WHERE id = ?");
         $stmtUpdateDoc->execute([$closed_status_id, $doc_id]);

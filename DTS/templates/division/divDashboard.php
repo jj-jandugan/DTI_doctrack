@@ -39,13 +39,13 @@ $dashboard = new Dashboard($pdo);
 
 // Call the class methods to get our numbers and table data
 $count_incoming = $dashboard->getIncomingCount($user_id);
-$count_onhand   = $dashboard->getOnHandCount($user_id);
+$count_onhand = $dashboard->getOnHandCount($user_id);
 $count_approval = $dashboard->getApprovalCount($user_id);
-$count_closed   = $dashboard->getClosedCount($user_id);
+$count_closed = $dashboard->getClosedCount($user_id);
 $count_upcoming = 0; // Placeholder for future logic
-$count_overdue  = 0; // Placeholder for future logic
+$count_overdue = 0; // Placeholder for future logic
 
-$incoming_docs  = $dashboard->getIncomingDocuments($user_id);
+$incoming_docs = $dashboard->getIncomingDocuments($user_id);
 
 // ==========================================
 // 3. ASSETS & MODULAR LINKS
@@ -59,17 +59,16 @@ $extra_css = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
-    <h2 class="user-name text-dark fw-bold mb-0"><?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
-    <h5 class="user-dept text-secondary fw-normal mb-4"><?= htmlspecialchars($user_info['division_name'] ?? 'Division Staff') ?></h5>
-
+?> <div class="dashboard-inner p-4">
+    <h2 class="user-name text-dark fw-bold mb-0">
+        <?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
+    <h5 class="user-dept text-secondary fw-normal mb-4">
+        <?= htmlspecialchars($user_info['division_name'] ?? 'Division Staff') ?></h5>
     <!-- Success Feedback if Password was updated -->
     <?php if ($cred_success): ?>
-        <div class="alert alert-success mb-4"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($cred_success) ?></div>
+        <div class="alert alert-success mb-4"><i
+                class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($cred_success) ?></div>
     <?php endif; ?>
-
     <!-- Cards Grid -->
     <div class="cards-grid">
         <a href="divOnMyDesk.php" class="card-link active">
@@ -127,7 +126,6 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </a>
     </div>
-
     <!-- Table Section -->
     <div class="mt-5">
         <h4 class="mb-3 fw-bold table-main-title">Incoming Documents:</h4>
@@ -158,12 +156,17 @@ require_once BASE_PATH . 'includes/header.php';
                             </tr>
                         <?php else: ?>
                             <?php foreach ($incoming_docs as $doc): ?>
-                                <tr class="clickable-row" onclick="window.location.href='divAcceptDocu.php?id=<?= $doc['id'] ?>'" style="cursor: pointer;">
+                                <tr class="clickable-row"
+                                    onclick="window.location.href='divAcceptDocu.php?id=<?= $doc['id'] ?>'"
+                                    style="cursor: pointer;">
                                     <td class="fw-bold text-primary"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                                    <td><span class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span></td>
+                                    <td><span
+                                            class="status <?= strtolower($doc['status_category']) ?>"><?= htmlspecialchars($doc['status_name']) ?></span>
+                                    </td>
                                     <td>
-                                        <?php if($doc['due_date']): ?>
-                                            <span class="text-danger fw-bold"><i class="fa-regular fa-calendar-xmark me-1"></i> <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
+                                        <?php if ($doc['due_date']): ?>
+                                            <span class="text-danger fw-bold"><i class="fa-regular fa-calendar-xmark me-1"></i>
+                                                <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
                                         <?php else: ?>
                                             <span class="text-muted">None</span>
                                         <?php endif; ?>
@@ -177,8 +180,10 @@ require_once BASE_PATH . 'includes/header.php';
                                         <div class="creator-cell">
                                             <div class="creator-avatar sm"><i class="fa-solid fa-user"></i></div>
                                             <div class="creator-info">
-                                                <span class="creator-name small"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
-                                                <span class="creator-role smaller"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
+                                                <span
+                                                    class="creator-name small"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
+                                                <span
+                                                    class="creator-role smaller"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
                                             </div>
                                         </div>
                                     </td>
@@ -191,50 +196,51 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <!-- Security Modal -->
 <?php if ($must_change == 1 || !empty($cred_error)): ?>
-<div class="modal fade" id="forceUpdateModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content custom-modal security-border">
-            <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-shield-halved me-2"></i> Security Action Required</h5>
-            </div>
-            <div class="modal-body px-4 py-4">
-                <?php if ($cred_error): ?>
-                    <div class="alert alert-danger py-2 small"><?= htmlspecialchars($cred_error) ?></div>
-                <?php else: ?>
-                    <div class="alert alert-warning py-2 small">
-                        <i class="fa-solid fa-lock me-1"></i> Update your auto-generated credentials before accessing the system.
-                    </div>
-                <?php endif; ?>
-
-                <!-- FORM NOW POINTS TO THE UNIVERSAL USER CONTROLLER -->
-                <form method="POST" action="../../controllers/User.php">
-                    <input type="hidden" name="action" value="force_update_credentials">
-                    <div class="mb-3">
-                        <label class="modal-label">Choose a New Username *</label>
-                        <input type="text" name="new_username" class="form-control custom-input" value="<?= htmlspecialchars($user_info['username']) ?>" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="modal-label">New Password *</label>
-                        <input type="password" name="new_password" class="form-control custom-input" minlength="6" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="modal-label">Confirm New Password *</label>
-                        <input type="password" name="confirm_password" class="form-control custom-input" minlength="6" required>
-                    </div>
-                    <div class="d-flex justify-content-end border-top pt-3">
-                        <button type="submit" class="btn btn-danger px-4 w-100">Update & Secure Account</button>
-                    </div>
-                </form>
+    <div class="modal fade" id="forceUpdateModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content custom-modal security-border">
+                <div class="modal-header border-0 pb-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-shield-halved me-2"></i> Security
+                        Action Required</h5>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <?php if ($cred_error): ?>
+                        <div class="alert alert-danger py-2 small"><?= htmlspecialchars($cred_error) ?></div>
+                    <?php else: ?>
+                        <div class="alert alert-warning py-2 small">
+                            <i class="fa-solid fa-lock me-1"></i> Update your auto-generated credentials before accessing the
+                            system.
+                        </div>
+                    <?php endif; ?>
+                    <!-- FORM NOW POINTS TO THE UNIVERSAL USER CONTROLLER -->
+                    <form method="POST" action="../../controllers/User.php">
+                        <input type="hidden" name="action" value="force_update_credentials">
+                        <div class="mb-3">
+                            <label class="modal-label">Choose a New Username *</label>
+                            <input type="text" name="new_username" class="form-control custom-input"
+                                value="<?= htmlspecialchars($user_info['username']) ?>" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="modal-label">New Password *</label>
+                            <input type="password" name="new_password" class="form-control custom-input" minlength="6"
+                                required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="modal-label">Confirm New Password *</label>
+                            <input type="password" name="confirm_password" class="form-control custom-input" minlength="6"
+                                required>
+                        </div>
+                        <div class="d-flex justify-content-end border-top pt-3">
+                            <button type="submit" class="btn btn-danger px-4 w-100">Update & Secure Account</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 <?php endif; ?>
-
 <!-- External JS -->
 <script src="<?= BASE_URL ?>static/js/dashboard.js"></script>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

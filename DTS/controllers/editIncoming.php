@@ -61,7 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->prepare("DELETE FROM records_documentrecipient WHERE document_id = ?")->execute([$doc_id]);
         if ($route_type === 'division' && !empty($_POST['route_users'])) {
             $stmtIns = $pdo->prepare("INSERT INTO records_documentrecipient (document_id, recipient_user_id) VALUES (?, ?)");
-            foreach ($_POST['route_users'] as $uid) { $stmtIns->execute([$doc_id, $uid]); }
+            foreach ($_POST['route_users'] as $uid) {
+                $stmtIns->execute([$doc_id, $uid]);
+            }
         }
 
         // Handle File Removals
@@ -70,7 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $stmtFile = $pdo->prepare("SELECT file_path FROM records_documentattachment WHERE id = ?");
                 $stmtFile->execute([$att_id]);
                 $path = $stmtFile->fetchColumn();
-                if ($path && file_exists('../' . $path)) unlink('../' . $path);
+                if ($path && file_exists('../' . $path))
+                    unlink('../' . $path);
                 $pdo->prepare("DELETE FROM records_documentattachment WHERE id = ?")->execute([$att_id]);
             }
         }
