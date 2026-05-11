@@ -107,37 +107,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | doctrack</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="static/css/login.css">
-    <link rel="stylesheet" href="static/css/button.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>static/css/login.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>static/css/button.css">
 </head>
+
 <body>
     <div class="bg-image"></div>
     <div class="bg-overlay"></div>
-
     <div class="login-container">
         <div class="login-card">
-            <img src="static/images/DTI_logo.png" alt="DTI Logo" class="logo-img">
-
+            <img src="<?= BASE_URL ?>static/images/DTI_logo.png" alt="DTI Logo" class="logo-img">
             <?php if ($error): ?>
                 <div class="alert alert-danger py-2"><?= $error ?></div>
             <?php endif; ?>
-
             <form method="post" action="login.php">
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control" placeholder="Enter your username*" required>
                 </div>
                 <div class="mb-1">
-                    <input type="password" name="password" class="form-control" placeholder="Enter your password*" required>
+                    <input type="password" name="password" class="form-control" placeholder="Enter your password*"
+                        required>
                 </div>
-                <a href="#" class="forgot-password">Forgot Password</a>
+                <a href="forgot-password.php" class="forgot-password">Forgot Password</a>
                 <button type="submit" class="btn-blue w-100">Log In</button>
             </form>
         </div>
     </div>
 </body>
+
 </html>
