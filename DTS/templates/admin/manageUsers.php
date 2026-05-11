@@ -165,27 +165,23 @@ $users = $stmt->fetchAll();
 $divisions = $pdo->query("SELECT * FROM records_division ORDER BY name")->fetchAll();
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="text-dark fw-bold mb-0">Manage Users</h2>
             <p class="text-secondary">Add, view, and manage system users and roles.</p>
         </div>
-
         <button type="button" class="btn btn-blue" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="fa-solid fa-user-plus me-2"></i> Add New User
-        </button>
+            <i class="fa-solid fa-user-plus me-2"></i> Add New User </button>
     </div>
-
     <?php if ($success_msg): ?>
-        <div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?></div>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?>
+        </div>
     <?php endif; ?>
     <?php if ($error_msg): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-danger"><i
+                class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
     <?php endif; ?>
-
     <div class="filter-container">
         <div class="row g-3">
             <div class="col-md-4">
@@ -205,13 +201,14 @@ require_once BASE_PATH . 'includes/header.php';
                 <select id="divFilter" class="form-select">
                     <option value="">Filter by Division (All)</option>
                     <?php foreach ($divisions as $div): ?>
-                        <option value="<?= htmlspecialchars($div['abbreviation']) ?>"><?= htmlspecialchars($div['abbreviation']) ?></option>
+                        <option value="<?= htmlspecialchars($div['abbreviation']) ?>">
+                            <?= htmlspecialchars($div['abbreviation']) ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
         </div>
     </div>
-
     <div class="table-container p-0">
         <div class="table-responsive">
             <table class="data-table" id="usersTable">
@@ -228,103 +225,109 @@ require_once BASE_PATH . 'includes/header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($users as $user): ?>
-                    <tr class="user-row">
-                        <td>
-                            <div class="creator-cell">
-                                <div class="creator-avatar" style="width: 35px; height: 35px;"><i class="fa-solid fa-user" style="font-size: 0.9rem;"></i></div>
-                                <div class="creator-info">
-                                    <span class="creator-name fw-bold search-target"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></span>
+                        <tr class="user-row">
+                            <td>
+                                <div class="creator-cell">
+                                    <div class="creator-avatar" style="width: 35px; height: 35px;"><i
+                                            class="fa-solid fa-user" style="font-size: 0.9rem;"></i></div>
+                                    <div class="creator-info">
+                                        <span
+                                            class="creator-name fw-bold search-target"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></span>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="search-target"><?= htmlspecialchars($user['username']) ?></td>
-                        <td class="search-target">
-                            <?= strpos($user['email'], '@dts.local') !== false ? '<span class="text-muted fst-italic">None provided</span>' : htmlspecialchars($user['email']) ?>
-                        </td>
-                        <td class="role-target"><span class="badge bg-primary px-3 py-2 rounded-pill"><?= htmlspecialchars($user['role'] ?? 'None') ?></span></td>
-                        <td class="div-target">
-                            <?php if ($user['division']): ?>
-                                <span class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($user['division']) ?></span>
-                            <?php else: ?>
-                                <span class="text-muted small">N/A</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php if ($user['is_active']): ?>
-                                <span class="text-success fw-bold" style="font-size: 0.85rem;"><i class="fa-solid fa-circle me-1"></i> Active</span>
-                            <?php else: ?>
-                                <span class="text-danger fw-bold" style="font-size: 0.85rem;"><i class="fa-solid fa-circle me-1"></i> Inactive</span>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <?php
+                            </td>
+                            <td class="search-target"><?= htmlspecialchars($user['username']) ?></td>
+                            <td class="search-target">
+                                <?= strpos($user['email'], '@dts.local') !== false ? '<span class="text-muted fst-italic">None provided</span>' : htmlspecialchars($user['email']) ?>
+                            </td>
+                            <td class="role-target"><span
+                                    class="badge bg-primary px-3 py-2 rounded-pill"><?= htmlspecialchars($user['role'] ?? 'None') ?></span>
+                            </td>
+                            <td class="div-target">
+                                <?php if ($user['division']): ?>
+                                    <span
+                                        class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($user['division']) ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted small">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($user['is_active']): ?>
+                                    <span class="text-success fw-bold" style="font-size: 0.85rem;"><i
+                                            class="fa-solid fa-circle me-1"></i> Active</span>
+                                <?php else: ?>
+                                    <span class="text-danger fw-bold" style="font-size: 0.85rem;"><i
+                                            class="fa-solid fa-circle me-1"></i> Inactive</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
                                 // Pull the password from the Session Vault if it was just generated during this login session
                                 $plain_password = isset($_SESSION['temp_passwords'][$user['id']]) ? $_SESSION['temp_passwords'][$user['id']] : '_______________________';
-                            ?>
-                            <button class="btn btn-sm btn-outline-info me-1" title="Print Account Credentials"
-                                onclick="printCredentials(
+                                ?>
+                                <button class="btn btn-sm btn-outline-info me-1" title="Print Account Credentials" onclick="printCredentials(
                                     '<?= addslashes(htmlspecialchars($user['first_name'] . ' ' . $user['last_name'])) ?>',
                                     '<?= addslashes(htmlspecialchars($user['username'])) ?>',
                                     '<?= addslashes(htmlspecialchars($user['role'] ?? 'None')) ?>',
                                     '<?= addslashes(htmlspecialchars($user['division'] ?? 'N/A')) ?>',
                                     '<?= addslashes(htmlspecialchars($plain_password)) ?>'
                                 )">
-                                <i class="fa-solid fa-print"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-outline-secondary me-1" title="Edit User" data-bs-toggle="modal" data-bs-target="#editUserModal"
-                                data-id="<?= $user['id'] ?>"
-                                data-fname="<?= htmlspecialchars($user['first_name']) ?>"
-                                data-mname="<?= htmlspecialchars($user['middle_name'] ?? '') ?>"
-                                data-lname="<?= htmlspecialchars($user['last_name']) ?>"
-                                data-email="<?= strpos($user['email'], '@dts.local') !== false ? '' : htmlspecialchars($user['email']) ?>"
-                                data-username="<?= htmlspecialchars($user['username']) ?>"
-                                data-role="<?= htmlspecialchars($user['role'] ?? '') ?>"
-                                data-division="<?= htmlspecialchars($user['division_id'] ?? '') ?>"
-                                data-active="<?= $user['is_active'] ?>">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-outline-danger" title="Delete User" data-bs-toggle="modal" data-bs-target="#deleteUserModal"
-                                data-id="<?= $user['id'] ?>"
-                                data-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" title="Edit User"
+                                    data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="<?= $user['id'] ?>"
+                                    data-fname="<?= htmlspecialchars($user['first_name']) ?>"
+                                    data-mname="<?= htmlspecialchars($user['middle_name'] ?? '') ?>"
+                                    data-lname="<?= htmlspecialchars($user['last_name']) ?>"
+                                    data-email="<?= strpos($user['email'], '@dts.local') !== false ? '' : htmlspecialchars($user['email']) ?>"
+                                    data-username="<?= htmlspecialchars($user['username']) ?>"
+                                    data-role="<?= htmlspecialchars($user['role'] ?? '') ?>"
+                                    data-division="<?= htmlspecialchars($user['division_id'] ?? '') ?>"
+                                    data-active="<?= $user['is_active'] ?>">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete User" data-bs-toggle="modal"
+                                    data-bs-target="#deleteUserModal" data-id="<?= $user['id'] ?>"
+                                    data-name="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
-
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content custom-modal">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-user-plus me-2" style="color: #263D81;"></i> Create New User</h5>
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-user-plus me-2"
+                        style="color: #263D81;"></i> Create New User</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 py-4">
                 <div class="alert alert-info mb-4" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-circle-info me-2"></i> <strong>Account Details Automation:</strong> The Username and a secure Temporary Password will be <strong>automatically generated</strong>.
+                    <i class="fa-solid fa-circle-info me-2"></i> <strong>Account Details Automation:</strong> The
+                    Username and a secure Temporary Password will be <strong>automatically generated</strong>.
                 </div>
-
                 <form method="POST" action="manageUsers.php" id="addUserForm">
                     <input type="hidden" name="action" value="add_user">
-
                     <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Personal Details</h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4"><label class="form-label modal-label">First Name *</label><input type="text" name="first_name" class="form-control custom-input" required></div>
-                        <div class="col-md-4"><label class="form-label modal-label">Middle Name</label><input type="text" name="middle_name" class="form-control custom-input"></div>
-                        <div class="col-md-4"><label class="form-label modal-label">Last Name *</label><input type="text" name="last_name" class="form-control custom-input" required></div>
+                        <div class="col-md-4"><label class="form-label modal-label">First Name *</label><input
+                                type="text" name="first_name" class="form-control custom-input" required></div>
+                        <div class="col-md-4"><label class="form-label modal-label">Middle Name</label><input
+                                type="text" name="middle_name" class="form-control custom-input"></div>
+                        <div class="col-md-4"><label class="form-label modal-label">Last Name *</label><input
+                                type="text" name="last_name" class="form-control custom-input" required></div>
                     </div>
-
                     <div class="row g-3 mb-4">
-                        <div class="col-md-12"><label class="form-label modal-label">Email Address (Optional)</label><input type="email" name="email" class="form-control custom-input" placeholder="Leave blank if not available"></div>
+                        <div class="col-md-12"><label class="form-label modal-label">Email Address
+                                (Optional)</label><input type="email" name="email" class="form-control custom-input"
+                                placeholder="Leave blank if not available"></div>
                     </div>
-
                     <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Role & Assignment</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
@@ -343,50 +346,57 @@ require_once BASE_PATH . 'includes/header.php';
                             <select class="form-select custom-input" name="division_id">
                                 <option value="" selected>None</option>
                                 <?php foreach ($divisions as $div): ?>
-                                    <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['abbreviation']) ?> - <?= htmlspecialchars($div['name']) ?></option>
+                                    <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['abbreviation']) ?> -
+                                        <?= htmlspecialchars($div['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
                         <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-check me-2"></i> Auto-Generate & Create User</button>
+                        <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-check me-2"></i>
+                            Auto-Generate & Create User</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content custom-modal">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-pen-to-square me-2" style="color: #263D81;"></i> Edit User Details</h5>
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-pen-to-square me-2"
+                        style="color: #263D81;"></i> Edit User Details</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 py-4">
                 <form method="POST" action="manageUsers.php">
                     <input type="hidden" name="action" value="edit_user">
                     <input type="hidden" name="user_id" id="edit_user_id">
-
                     <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Personal Details</h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4"><label class="form-label modal-label">First Name *</label><input type="text" name="first_name" id="edit_fname" class="form-control custom-input" required></div>
-                        <div class="col-md-4"><label class="form-label modal-label">Middle Name</label><input type="text" name="middle_name" id="edit_mname" class="form-control custom-input"></div>
-                        <div class="col-md-4"><label class="form-label modal-label">Last Name *</label><input type="text" name="last_name" id="edit_lname" class="form-control custom-input" required></div>
-                    </div>
-
-                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Account Details</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4"><label class="form-label modal-label">Email (Optional)</label><input type="email" name="email" id="edit_email" class="form-control custom-input"></div>
-                        <div class="col-md-4"><label class="form-label modal-label">Username *</label><input type="text" name="username" id="edit_username" class="form-control custom-input" required></div>
-                        <div class="col-md-4">
-                            <label class="form-label modal-label text-primary">Reset Password</label>
-                            <input type="text" name="password" class="form-control custom-input" placeholder="Type new password to reset">
+                        <div class="col-md-4"><label class="form-label modal-label">First Name *</label><input
+                                type="text" name="first_name" id="edit_fname" class="form-control custom-input"
+                                required></div>
+                        <div class="col-md-4"><label class="form-label modal-label">Middle Name</label><input
+                                type="text" name="middle_name" id="edit_mname" class="form-control custom-input"></div>
+                        <div class="col-md-4"><label class="form-label modal-label">Last Name *</label><input
+                                type="text" name="last_name" id="edit_lname" class="form-control custom-input" required>
                         </div>
                     </div>
-
+                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Account Details</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4"><label class="form-label modal-label">Email (Optional)</label><input
+                                type="email" name="email" id="edit_email" class="form-control custom-input"></div>
+                        <div class="col-md-4"><label class="form-label modal-label">Username *</label><input type="text"
+                                name="username" id="edit_username" class="form-control custom-input" required></div>
+                        <div class="col-md-4">
+                            <label class="form-label modal-label text-primary">Reset Password</label>
+                            <input type="text" name="password" class="form-control custom-input"
+                                placeholder="Type new password to reset">
+                        </div>
+                    </div>
                     <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Role & Assignment</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
@@ -404,7 +414,8 @@ require_once BASE_PATH . 'includes/header.php';
                             <select class="form-select custom-input" name="division_id" id="edit_division">
                                 <option value="">None</option>
                                 <?php foreach ($divisions as $div): ?>
-                                    <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['abbreviation']) ?> - <?= htmlspecialchars($div['name']) ?></option>
+                                    <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['abbreviation']) ?> -
+                                        <?= htmlspecialchars($div['name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -418,25 +429,28 @@ require_once BASE_PATH . 'includes/header.php';
                     </div>
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
                         <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-floppy-disk me-2"></i> Save Changes</button>
+                        <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-floppy-disk me-2"></i>
+                            Save Changes</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
 <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content custom-modal border-danger">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i> Confirm Deletion</h5>
+                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>
+                    Confirm Deletion</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 py-4 text-center">
-                <p class="mb-4">Are you sure you want to permanently delete the user account for <strong id="delete_user_name" class="text-dark"></strong>?</p>
+                <p class="mb-4">Are you sure you want to permanently delete the user account for <strong
+                        id="delete_user_name" class="text-dark"></strong>?</p>
                 <div class="alert alert-warning text-start" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-circle-info me-1"></i> If this user has processed documents, the system will prevent deletion. Consider setting them to <strong>Inactive</strong> via the Edit menu instead.
+                    <i class="fa-solid fa-circle-info me-1"></i> If this user has processed documents, the system will
+                    prevent deletion. Consider setting them to <strong>Inactive</strong> via the Edit menu instead.
                 </div>
                 <form method="POST" action="manageUsers.php">
                     <input type="hidden" name="action" value="delete_user">
@@ -449,10 +463,8 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
     </div>
-</div>
-
-<?php
-$extra_js = "
+</div> <?php
+$extra_js = <<<'JS'
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -522,6 +534,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if(searchInput) searchInput.addEventListener('keyup', filterTable);
     if(roleFilter) roleFilter.addEventListener('change', filterTable);
     if(divFilter) divFilter.addEventListener('change', filterTable);
+
+    const params = new URLSearchParams(window.location.search);
+    const editUserId = params.get('edit');
+
+    if (editUserId) {
+        const editButton = document.querySelector(
+            '[data-bs-target="#editUserModal"][data-id="' + editUserId + '"]'
+        );
+
+        if (editButton) {
+            editButton.click();
+        }
+    }
 });
 
 // 5. PRINT CREDENTIALS FUNCTION
@@ -567,6 +592,7 @@ function printCredentials(name, username, role, division, password) {
     printWindow.document.close();
 }
 </script>
-";
+JS;
+
 require_once BASE_PATH . 'includes/footer.php';
 ?>
