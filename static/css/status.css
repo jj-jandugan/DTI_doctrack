@@ -1,0 +1,108 @@
+/* DTS/static/css/status.css */
+
+.status {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+/* =======================================
+   6 CORE STATUS CATEGORIES
+======================================= */
+
+/* 1. ONGOING (Active, Routing) */
+.status.ongoing {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid #bfdbfe !important;
+}
+
+/* 2. FOR-APPROVAL (Action Required) */
+.status.for-approval {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fde68a !important;
+}
+
+/* 3. APPROVED (Success) */
+.status.approved {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #bbf7d0 !important;
+}
+
+/* 4. REJECTED (Returned / Failed) */
+.status.rejected {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5 !important;
+}
+
+/* 5. CANCELLED (Voided / Dead) */
+.status.cancelled {
+    background-color: #f3f4f6 !important;
+    color: #4b5563 !important;
+    border: 1px solid #d1d5db !important;
+}
+
+/* 6. CLOSED (Completed / Archived) */
+.status.closed {
+    background-color: #ccfbf1 !important;
+    color: #0f766e !important;
+    border: 1px solid #99f6e4 !important;
+}
+
+/* Special Edge Case */
+.status.overdue {
+    background-color: #fef2f2 !important;
+    color: #b91c1c !important;
+    border: 1px solid #fecaca !important;
+}
+
+
+/* =======================================
+   TRACKING HISTORY ACTION BADGES
+======================================= */
+
+.action-badge {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.action-CREATED   { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.action-ENCODED   { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.action-ROUTED    { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.action-UPDATED   { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+
+/* Match with Core Categories */
+.action-APPROVED  { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.action-REJECTED  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.action-CANCELLED { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
+.action-CLOSED    { background: #ccfbf1; color: #0f766e; border: 1px solid #99f6e4; }
+
+.action-DEFAULT   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+
+/* =======================================
+   DOCUMENT DIRECTION BADGES
+======================================= */
+
+.badge-direction {
+    font-size: 0.70rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.dir-incoming { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.dir-outgoing { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }

@@ -1,0 +1,38 @@
+/* Modern Pagination Styling */
+.pagination-modern {
+    gap: 5px;
+}
+
+.pagination-modern .page-item .page-link {
+    border: none;
+    border-radius: 8px !important;
+    padding: 8px 14px;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.pagination-modern .page-item.active .page-link {
+    background-color: #263D81; /* Matches your brand color */
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(38, 61, 129, 0.3);
+}
+
+.pagination-modern .page-item.disabled .page-link {
+    background-color: #f9fafb;
+    color: #d1d5db;
+}
+
+.pagination-modern .page-item:not(.active):not(.disabled) .page-link:hover {
+    background-color: #e5e7eb;
+    color: #263D81;
+    transform: translateY(-1px);
+}
+
+.pagination-info .smaller {
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}

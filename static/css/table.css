@@ -1,0 +1,92 @@
+.table-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    border: 1px solid #e5e7eb;
+    overflow: visible;
+    height: auto;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.data-table {
+    min-width: 1350px; /* Slightly increased to accommodate the wider subject column */
+    border-collapse: collapse;
+}
+
+.clickable-row {
+    cursor: pointer;
+}
+
+.data-table th {
+    color: #111827;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    padding: 14px 16px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.data-table td {
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: normal;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.data-table thead.sticky-top th {
+    position: sticky;
+    top: 0;
+    background-color: #ffffff;
+    z-index: 2;
+}
+
+.table-responsive {
+    overflow: auto;
+    overflow-y: visible;
+}
+
+.log-date { font-size: 0.85rem; color: #64748b; font-weight: 500; }
+.log-time { font-size: 0.80rem; color: #94a3b8; }
+
+/* ==========================================================
+   STATUS BADGE WRAPPING RULES
+   ========================================================== */
+.data-table .status {
+    white-space: nowrap !important;
+    display: inline-block;
+}
+
+.data-table .status.for-approval {
+    white-space: normal !important;
+    text-align: center;
+}
+
+/* ==========================================================
+   COLUMN WIDTH UTILITIES
+   ========================================================== */
+/* Forces the Subject column to be wider */
+.col-subject {
+    min-width: 200px !important;
+    width: 20%;
+}
+
+.locked-row {
+        background-color: #fafafa !important;
+    }
+    .locked-row td {
+        color: #94a3b8 !important;
+    }
+    .locked-row .text-primary {
+        color: #94a3b8 !important;
+    }
+    .locked-row:hover {
+        background-color: #f1f5f9 !important;
+    }

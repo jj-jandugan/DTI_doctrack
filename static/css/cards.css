@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+    --primary-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card-link{
+    align-items: center;
+    text-decoration: none;
+}
+
+.card-link:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.6);
+}
+
+.custom-card {
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: #ffffff;
+    min-height: 135px;
+    transition: all 0.3s ease;
+}
+
+.custom-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+}
+
+.card-number {
+    font-family: var(--primary-font);
+    font-size: 2.8rem;
+    font-weight: 500;
+    text-align: right;
+    line-height: 1;
+    margin-top: -5px;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+}
+
+.card-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.icon-box {
+    width: 42px;
+    height: 42px;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.icon-box i {
+    font-size: 1.3rem;
+    color: #ffffff;
+}
+
+.card-incoming { background-color: #D0D46A; }
+.card-onhand   { background-color: #3F5176; }
+.card-approval { background-color: #CD9B45; }
+.card-upcoming { background-color: #F3935A; }
+.card-overdue  { background-color: #B64A5B; }
+.card-closed   { background-color: #838F6A; }
