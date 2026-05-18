@@ -18,13 +18,15 @@ $success_msg = $_SESSION['success_msg'] ?? '';
 $error_msg = $_SESSION['error_msg'] ?? '';
 unset($_SESSION['success_msg'], $_SESSION['error_msg']);
 
-// 1. FETCH REFERENCE DATA
+// 1. FETCH ALL REFERENCE DATA
 $classifications = $docManager->getClassifications();
 $document_types  = $docManager->getDocumentTypes();
 $signatories     = $docManager->getSignatories();
 $divisions       = $docManager->getDivisions();
 $groups          = $docManager->getGroups();
+$dti_branches    = $docManager->getDtiBranches();
 $users_by_div    = $docManager->getUsersGroupedByDivision();
+$origins         = $pdo->query("SELECT name FROM records_origin ORDER BY name ASC")->fetchAll();
 
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
@@ -32,19 +34,9 @@ $limit = 10;
 $offset = ($page - 1) * $limit;
 
 try {
-    // 2. Fetch Reference Data for the Modal
-    $classifications = $docManager->getClassifications();
-    $document_types  = $docManager->getDocumentTypes();
-    $signatories     = $docManager->getSignatories();
-    $divisions       = $docManager->getDivisions();
-    $groups          = $docManager->getGroups();
-    $users_by_div    = $docManager->getUsersGroupedByDivision();
-
-    // 3. Fetch the Paginated INCOMING Documents for the Table
+    // 2. Fetch the Paginated INCOMING Documents for the Table
     $total_records   = $docManager->getEncodedIncomingTotalCount($user_id);
     $total_pages     = ceil($total_records / $limit);
-
-    // FIX: Using the correct Incoming functions and variable name
     $my_encoded_docs = $docManager->getEncodedIncomingPaginated($user_id, $limit, $offset);
 
 } catch (Exception $e) {
@@ -53,7 +45,6 @@ try {
 }
 
 // 3. ASSETS & CUSTOM STYLES
-// Added a compact table style to reduce the wide gaps between columns
 $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/creator.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/table.css">
@@ -194,45 +185,64 @@ require_once BASE_PATH . 'includes/header.php';
     </div>
 </div>
 
-<div class="modal" id="newDocModal" data-bs-backdrop="static" tabindex="-1">
+<div class="modal fade" id="newDocModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content custom-modal">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
                 <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-file-import me-2 text-success"></i> Encode Incoming Document</h5>
-                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close shadow-none" data-bs-toggle="modal" data-bs-target="#cancelConfirmModal"></button>
             </div>
-            <div class="modal-body px-4 py-4">
-                <form method="POST" action="../../controllers/incoming.php" enctype="multipart/form-data">
-                 <input type="hidden" name="action" value="create_document">
 
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-4"><label class="modal-label">Classification *</label>
-                            <select class="form-select custom-input" name="classification" required>
-                                <option value="" selected disabled>Select...</option>
-                                <?php foreach ($classifications as $item): ?><option value="<?= $item['id'] ?>"><?= htmlspecialchars($item['name']) ?></option><?php endforeach; ?>
-                            </select>
+            <div class="modal-body px-4 py-4">
+                <form method="POST" action="../../controllers/incoming.php" enctype="multipart/form-data" id="createDocumentForm">
+                    <input type="hidden" name="action" value="create_document">
+                    <input type="hidden" name="hidden_classification" id="hidden_classification" value="">
+
+                    <div class="form-section bg-light border p-3 rounded mb-4">
+                        <label class="form-label fw-bold text-success mb-3 small"><i class="fa-solid fa-building me-1"></i> Origin Information *</label>
+
+                        <select class="form-select custom-input mb-3 border-warning" id="originType" required>
+                            <option value="" selected disabled>Select Origin Type...</option>
+                            <option value="within_dti">Within DTI (Other Branches)</option>
+                            <option value="outside_dti">Outside Offices / External Agency</option>
+                        </select>
+
+                        <div id="block-origin-dti" class="d-none">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <select class="form-select custom-input" id="originDti" name="origin_office" disabled required>
+                                        <option value="">Select DTI Branch...</option>
+                                        <?php foreach ($dti_branches as $branch): ?>
+                                            <option value="<?= htmlspecialchars($branch['name']) ?>"><?= htmlspecialchars($branch['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="sender_name" class="form-control custom-input" placeholder="Sender Name / Contact Person (Optional)" disabled>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4"><label class="modal-label">Document Type *</label>
-                            <select class="form-select custom-input" name="document_type" required>
-                                <option value="" selected disabled>Select...</option>
-                                <?php foreach ($document_types as $type): ?><option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['name']) ?></option><?php endforeach; ?>
-                            </select>
+
+                        <div id="block-origin-ext" class="d-none">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input type="text" list="officeOptions" id="originExt" name="origin_office" class="form-control custom-input" placeholder="Type or select Agency..." disabled required autocomplete="off">
+                                    <datalist id="officeOptions">
+                                        <?php foreach ($origins as $origin): ?>
+                                            <option value="<?= htmlspecialchars($origin['name']) ?>">
+                                        <?php endforeach; ?>
+                                    </datalist>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="sender_name" class="form-control custom-input" placeholder="Sender Name / Contact Person (Optional)" disabled>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4"><label class="modal-label">Due Date (Optional)</label><input type="date" name="due_date" class="form-control custom-input"></div>
                     </div>
-                    <div class="row g-4 mb-4 mt-4 border p-3 rounded bg-light">
-                        <div class="col-md-6"><label class="modal-label">Origin (Office/Agency) *</label>
-                            <input list="officeOptions" name="origin_office" class="form-control custom-input border-warning" required autocomplete="off">
-                            <datalist id="officeOptions">
-                                <?php foreach($pdo->query("SELECT name FROM records_origin")->fetchAll(PDO::FETCH_COLUMN) as $o): ?><option value="<?= htmlspecialchars($o) ?>"><?php endforeach; ?>
-                            </datalist>
-                        </div>
-                        <div class="col-md-6"><label class="modal-label">Contact Person</label><input type="text" name="sender_name" class="form-control custom-input"></div>
-                    </div>
-                    <div class="mb-4"><label class="modal-label">Subject *</label><textarea name="subject" class="form-control custom-input" rows="2" required></textarea></div>
+
                     <div class="border rounded p-4 mb-4 bg-light">
                         <label class="fw-bold text-success mb-3"><i class="fa-solid fa-sitemap me-1"></i> Address (Internal Destination) *</label>
-                        <select class="form-select custom-input mb-3 border-success" name="route_type" id="routeType" required>
+                        <select class="form-select custom-input mb-3 border-success" name="route_type" id="routeTypeIncoming" required>
                             <option value="" selected disabled>Select internal routing path...</option>
                             <option value="division">Internal Division / Specific Personnel</option>
                             <option value="group">Distribution Group</option>
@@ -249,34 +259,74 @@ require_once BASE_PATH . 'includes/header.php';
                             </div>
                         </div>
                         <div id="block-group" class="routing-block d-none">
-                            <select class="form-select custom-input" name="route_group">
+                            <select class="form-select custom-input" name="route_group" id="route_group">
                                 <option value="">Select Group...</option>
                                 <?php foreach ($groups as $grp): ?><option value="<?= $grp['id'] ?>"><?= htmlspecialchars($grp['group_name']) ?></option><?php endforeach; ?>
                             </select>
                         </div>
                     </div>
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-6"><label class="modal-label">Route to Signatory *</label>
-                            <select class="form-select custom-input border-primary" name="signatory" required>
-                                <option value="" selected disabled>Select RD/ARD...</option>
-                                <?php foreach ($signatories as $sig): ?><option value="<?= $sig['id'] ?>"><?= htmlspecialchars($sig['first_name'] . ' ' . $sig['last_name']) ?></option><?php endforeach; ?>
+
+                    <div class="row g-3 mb-3 mt-1">
+                        <div class="col-md-4">
+                            <label class="modal-label">Classification *</label>
+                            <select class="form-select custom-input" name="classification" id="classification" required>
+                                <option value="" selected disabled>Select...</option>
+                                <?php foreach ($classifications as $item): ?>
+                                    <option value="<?= $item['id'] ?>"><?= htmlspecialchars($item['name']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6"><label class="modal-label">Particulars</label><input type="text" name="particulars" class="form-control custom-input"></div>
+                        <div class="col-md-4">
+                            <label class="modal-label">Document Type *</label>
+                            <select class="form-select custom-input" name="document_type" required>
+                                <option value="" selected disabled>Select...</option>
+                                <?php foreach ($document_types as $type): ?>
+                                    <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="modal-label">Due Date (Optional)</label>
+                            <input type="date" name="due_date" class="form-control custom-input">
+                        </div>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="modal-label">Subject *</label>
+                        <textarea name="subject" class="form-control custom-input" rows="2" placeholder="Enter document subject..." required></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="modal-label">Route to Signatory *</label>
+                            <select class="form-select custom-input border-primary" name="signatory" required>
+                                <option value="" selected disabled>Select RD/ARD...</option>
+                                <?php foreach ($signatories as $sig): ?>
+                                    <option value="<?= $sig['id'] ?>"><?= htmlspecialchars($sig['first_name'] . ' ' . $sig['last_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="modal-label">Particulars (Optional)</label>
+                            <input type="text" name="particulars" class="form-control custom-input" placeholder="Additional details">
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label class="modal-label">Attachments</label>
-                        <div class="drag-drop-box mt-2" id="dropZone">
-                            <input type="file" id="fileInput" name="document_files[]" multiple style="display:none">
-                            <div id="fileQueueDisplay" class="w-100 text-center">
+                        <div class="drag-drop-box mt-2" id="dropZone" style="cursor: pointer; border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px;">
+                            <div class="upload-content text-center w-100">
+                                <input type="file" id="fileInput" name="document_files[]" multiple style="display:none">
                                 <i class="fa-solid fa-cloud-arrow-up display-6 text-primary"></i>
-                                <div class="mt-3" id="dropZoneText"><b>Click to upload</b> or drag and drop</div>
+                                <div class="mt-3 text-muted" id="dropZoneText"><span class="fw-bold text-dark">Click to upload</span> or drag and drop</div>
+                                <div id="fileQueueDisplay" class="w-100 text-start mt-3"></div>
                             </div>
                         </div>
                     </div>
+
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-blue px-4">Create Document</button>
+                        <button type="button" class="btn btn-cancel" data-bs-toggle="modal" data-bs-target="#cancelConfirmModal">Cancel</button>
+                        <button type="submit" class="btn btn-blue px-4" id="btnFakeSubmit">Create Document</button>
                     </div>
                 </form>
             </div>
@@ -284,16 +334,21 @@ require_once BASE_PATH . 'includes/header.php';
     </div>
 </div>
 
-<div class="modal" id="cancelConfirmModal" tabindex="-1">
+<div class="modal fade" id="cancelConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content custom-modal">
+        <div class="modal-content custom-modal" style="border: 2px solid #eab308;">
             <div class="modal-body text-center p-4">
-                <i class="fa-solid fa-triangle-exclamation text-warning mb-3 display-4"></i>
-                <h5 class="fw-bold">Discard?</h5>
-                <p class="text-muted small">Any unsaved information will be cleared.</p>
+                <i class="fa-solid fa-triangle-exclamation text-warning mb-3" style="font-size: 3rem;"></i>
+                <h5 class="fw-bold text-dark">Discard progress?</h5>
+                <p class="text-muted" style="font-size: 0.9rem;">Any information entered will be lost. Are you sure?</p>
+
                 <div class="d-flex flex-column gap-2 mt-4">
-                    <button type="button" class="btn btn-warning fw-bold w-100" onclick="location.reload()">Yes, Discard</button>
-                    <button type="button" class="btn btn-light w-100 border" data-bs-dismiss="modal">No, Keep Editing</button>
+                    <button type="button" class="btn btn-warning fw-bold text-dark w-100" onclick="window.location.reload()">
+                        Yes, Discard
+                    </button>
+                    <button type="button" class="btn btn-light w-100 border" data-bs-target="#newDocModal" data-bs-toggle="modal">
+                        No, Keep Editing
+                    </button>
                 </div>
             </div>
         </div>

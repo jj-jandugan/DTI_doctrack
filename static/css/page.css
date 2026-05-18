@@ -1,6 +1,7 @@
 /* Modern Pagination Styling */
 .pagination-modern {
     gap: 5px;
+    margin-bottom: 20px; /* FIX: Added margin to create space below the buttons */
 }
 
 .pagination-modern .page-item .page-link {

@@ -116,7 +116,7 @@ require_once BASE_PATH . 'includes/header.php';
 
     </div>
 
-    <div class="table-container p-0">
+    <div class="table-container pb-4">
         <div class="table-responsive">
             <table class="data-table" id="deskTable">
                 <thead>

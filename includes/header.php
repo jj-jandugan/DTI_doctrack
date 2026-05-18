@@ -92,8 +92,8 @@ if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__DIR__) . '/');
             </div>
 
            <div class="ms-auto d-flex align-items-center pe-4 gap-4">
- <!--                <div class="profile-circle"></div>
-                <a href="#" class="notification-bell"><i class="fas fa-bell"></i></a> -->
+                 <div class="profile-circle"></div>
+                <a href="#" class="notification-bell"><i class="fas fa-bell"></i></a>
                 <form action="<?= BASE_URL ?>logout.php" method="POST" class="m-0 p-0">
                     <button type="submit" class="btn-logout d-flex align-items-center gap-2">
                         <i class="fa-solid fa-right-from-bracket"></i>

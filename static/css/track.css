@@ -1,0 +1,84 @@
+/* Visual Tracker Styles (5 Steps) */
+.visual-stepper {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 2rem;
+    padding: 0 20px;
+}
+.visual-stepper::before {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 40px;
+    right: 40px;
+    height: 3px;
+    background: #e2e8f0;
+    z-index: 1;
+}
+.step {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    flex: 1;
+}
+.step .circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    font-weight: bold;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 3px #fff;
+}
+.step.active .circle { background: #1d4ed8; color: #fff; }
+.step.completed .circle { background: #10b981; color: #fff; }
+.step.danger .circle { background: #dc3545; color: #fff; }
+.step .label {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #64748b;
+    text-transform: uppercase;
+}
+.step.active .label, .step.completed .label { color: #1e293b; }
+.step.danger .label { color: #dc3545; }
+
+/* Timeline Styles */
+.timeline-container { position: relative; padding-left: 30px; }
+.timeline-container::before {
+    content: "";
+    position: absolute;
+    left: 11px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e2e8f0;
+}
+.timeline-item { position: relative; margin-bottom: 1.2rem; }
+.timeline-icon {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #1d4ed8;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #fff;
+}
+.timeline-content {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}

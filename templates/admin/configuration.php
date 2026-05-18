@@ -58,6 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt->execute([trim($_POST['name']), trim($_POST['category'])]);
             $success_msg = "Status added successfully!";
         }
+        elseif ($action === 'add_dtibranch' && !empty(trim($_POST['name']))) {
+            $stmt = $pdo->prepare("INSERT INTO records_dtibranch (name) VALUES (?)");
+            $stmt->execute([trim($_POST['name'])]);
+            $success_msg = "DTI Branch added successfully!";
+        }
 
         // --- EDIT ACTIONS ---
         elseif ($action === 'edit_classification') {
@@ -80,6 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt->execute([trim($_POST['name']), trim($_POST['category']), $_POST['id']]);
             $success_msg = "Status updated successfully!";
         }
+        elseif ($action === 'edit_dtibranch') {
+            $stmt = $pdo->prepare("UPDATE records_dtibranch SET name = ? WHERE id = ?");
+            $stmt->execute([trim($_POST['name']), $_POST['id']]);
+            $success_msg = "DTI Branch updated successfully!";
+        }
 
         // --- DELETE ACTIONS ---
         elseif (str_starts_with($action, 'delete_')) {
@@ -88,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($action === 'delete_type') $table = 'records_documenttype';
             if ($action === 'delete_division') $table = 'records_division';
             if ($action === 'delete_status') $table = 'records_status';
+            if ($action === 'delete_dtibranch') $table = 'records_dtibranch';
 
             $stmt = $pdo->prepare("DELETE FROM $table WHERE id = ?");
             $stmt->execute([$id]);
@@ -110,6 +121,7 @@ $classifications = $pdo->query("SELECT * FROM records_classification ORDER BY id
 $doc_types       = $pdo->query("SELECT * FROM records_documenttype ORDER BY id DESC")->fetchAll();
 $divisions       = $pdo->query("SELECT * FROM records_division ORDER BY name ASC")->fetchAll();
 $statuses        = $pdo->query("SELECT * FROM records_status ORDER BY category ASC, name ASC")->fetchAll();
+$dti_branches    = $pdo->query("SELECT * FROM records_dtibranch ORDER BY name ASC")->fetchAll();
 
 require_once BASE_PATH . 'includes/header.php';
 ?>
@@ -127,6 +139,9 @@ require_once BASE_PATH . 'includes/header.php';
         </li>
         <li class="nav-item">
             <button class="nav-link <?= $active_tab == 'doctypes' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#doctypes">Document Types</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link <?= $active_tab == 'dtibranches' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#dtibranches">DTI Branches</button>
         </li>
         <li class="nav-item">
             <button class="nav-link <?= $active_tab == 'divisions' ? 'active' : '' ?>" data-bs-toggle="tab" data-bs-target="#divisions">Divisions</button>
@@ -190,6 +205,36 @@ require_once BASE_PATH . 'includes/header.php';
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editTypeModal" data-id="<?= $type['id'] ?>" data-name="<?= htmlspecialchars($type['name']) ?>"><i class="fa-solid fa-pen"></i></button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-id="<?= $type['id'] ?>" data-name="<?= htmlspecialchars($type['name']) ?>" data-action="delete_type" data-tab="doctypes"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade <?= $active_tab == 'dtibranches' ? 'show active' : '' ?>" id="dtibranches">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark m-0">DTI Branches</h5>
+                <form method="POST" action="configuration.php" class="d-flex gap-2">
+                    <input type="hidden" name="action" value="add_dtibranch">
+                    <input type="hidden" name="active_tab" value="dtibranches">
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="New Branch Name..." required style="width: 250px;">
+                    <button type="submit" class="btn btn-blue btn-sm"><i class="fa-solid fa-plus me-1"></i> Add</button>
+                </form>
+            </div>
+
+            <div class="table-container p-0">
+                <table class="data-table">
+                    <thead><tr><th width="10%">ID</th><th>BRANCH NAME</th><th width="15%">ACTIONS</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($dti_branches as $branch): ?>
+                        <tr>
+                            <td>#<?= $branch['id'] ?></td>
+                            <td class="fw-bold text-dark"><?= htmlspecialchars($branch['name']) ?></td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBranchModal" data-id="<?= $branch['id'] ?>" data-name="<?= htmlspecialchars($branch['name']) ?>"><i class="fa-solid fa-pen"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal" data-id="<?= $branch['id'] ?>" data-name="<?= htmlspecialchars($branch['name']) ?>" data-action="delete_dtibranch" data-tab="dtibranches"><i class="fa-solid fa-trash"></i></button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -354,6 +399,28 @@ require_once BASE_PATH . 'includes/header.php';
                     <input type="hidden" name="id" id="editTypeId">
 
                     <input type="text" name="name" id="editTypeName" class="form-control custom-input mb-4" required>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-blue px-4">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editBranchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <div class="modal-body p-4">
+                <h5 class="fw-bold mb-4">Edit DTI Branch</h5>
+                <form method="POST">
+                    <input type="hidden" name="action" value="edit_dtibranch">
+                    <input type="hidden" name="active_tab" value="dtibranches">
+                    <input type="hidden" name="id" id="editBranchId">
+
+                    <input type="text" name="name" id="editBranchName" class="form-control custom-input mb-4" required>
 
                     <div class="d-flex justify-content-end gap-2">
                         <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>

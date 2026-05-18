@@ -36,6 +36,7 @@ try {
     $divisions       = $docManager->getDivisions();
     $groups          = $docManager->getGroups();
     $users_by_div    = $docManager->getUsersGroupedByDivision();
+    $dti_branches    = $docManager->getDtiBranches();
 
     // 3. Fetch the Paginated Outgoing Documents for the Table
     $total_records   = $docManager->getActiveOutgoingTotalCount($user_id);
@@ -61,7 +62,10 @@ $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/filter.css">
 ';
 
+// Convert user data to JSON so our external JS file can use it for the checkboxes
 $usersByDivJson = json_encode($users_by_div);
+
+// Link the external Javascript files (including the newly updated create_document.js)
 $extra_js = '
 <script id="usersData" type="application/json">' . $usersByDivJson . '</script>
 <script src="' . BASE_URL . 'static/js/filters.js"></script>
@@ -87,7 +91,6 @@ require_once BASE_PATH . 'includes/header.php';
         </button>
 
         <div class="filter-bar justify-content-end d-flex flex-wrap gap-2 align-items-center">
-
             <select id="statusFilter" class="form-select custom-select" style="width: auto;">
                 <option value="">All Statuses</option>
                 <option value="For Approval">For Approval</option>
@@ -115,85 +118,66 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 
-    <div class="table-container p-0">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>DTS NO.</th>
-                    <th>STATUS</th>
-                    <th>DEADLINE</th>
-                    <th>DATE CREATED</th>
-                    <th>SUBJECT</th>
-                    <th>ADDRESS</th> <th>SIGNATORY</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($outgoing_docs)): ?>
+    <div class="table-container pb-4">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
-                            <span class="text-secondary">No Active Outgoing Documents</span>
-                        </td>
+                        <th>DTS NO.</th>
+                        <th>STATUS</th>
+                        <th>DEADLINE</th>
+                        <th>DATE CREATED</th>
+                        <th>SUBJECT</th>
+                        <th>ADDRESS</th>
+                        <th>SIGNATORY</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($outgoing_docs as $doc):
-                        // 1. Define if the document is approved
-                        $is_approved = (strtoupper($doc['status_name']) === 'APPROVED');
-
-                        // 2. Define the attributes based on status
-                        if ($is_approved) {
-                            // Triggers the modal and provides the DTS number for JavaScript
-                            $row_attributes = 'data-bs-toggle="modal" data-bs-target="#lockedModal" data-dts="'.htmlspecialchars($doc['dts_no']).'"';
-                        } else {
-                            // Standard redirect to edit page
-                            $row_attributes = 'onclick="window.location.href=\'divEditDocu.php?id=' . $doc['id'] . '\'"';
-                        }
-
-                        // 3. Assign the styling class
-                        $row_class = $is_approved ? "locked-row" : "clickable-row";
-                    ?>
-                        <tr class="doc-row <?= $row_class ?>" <?= $row_attributes ?> style="cursor: pointer;">
-                            <td class="fw-bold text-primary search-target">
-                                <?= htmlspecialchars($doc['dts_no']) ?>
-                                <?php if($is_approved): ?>
-                                    <i class="fa-solid fa-lock ms-1 text-muted" style="font-size: 0.7rem;" title="Locked for editing"></i>
-                                <?php endif; ?>
+                </thead>
+                <tbody>
+                    <?php if (empty($outgoing_docs)): ?>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <span class="text-secondary">No Active Outgoing Documents</span>
                             </td>
-
-                            <td>
-                                <span class="status <?= strtolower($doc['status_category']) ?> status-target">
-                                    <?= htmlspecialchars($doc['status_name']) ?>
-                                </span>
-                            </td>
-
-                            <td>
-                                <?php if ($doc['due_date']): ?>
-                                    <span class="text-dark small"><?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
-                                <?php else: ?>
-                                    <span class="text-muted small">None</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
-                                <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
-                                <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
-                            </td>
-                            <td class="text-dark search-target"><?= htmlspecialchars($doc['subject']) ?></td>
-
-                            <td class="text-truncate small search-target" style="max-width: 200px;" title="<?= htmlspecialchars($doc['address_name'] ?? '') ?>">
-                                <?= htmlspecialchars($doc['address_name'] ?? '---') ?>
-                            </td>
-
-                            <td class="small search-target"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? '---'))) ?></td>
-                            <td class="d-none class-target"><?= htmlspecialchars($doc['class_name']) ?></td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php foreach ($outgoing_docs as $doc): ?>
+                            <tr class="doc-row clickable-row" onclick="window.location.href='divEditDocu.php?id=<?= $doc['id'] ?>'" style="cursor: pointer;">
+                                <td class="fw-bold text-primary search-target">
+                                    <?= htmlspecialchars($doc['dts_no']) ?>
+                                </td>
+                                <td>
+                                    <span class="status <?= strtolower($doc['status_category']) ?> status-target">
+                                        <?= htmlspecialchars($doc['status_name']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if ($doc['due_date']): ?>
+                                        <span class="text-dark small"><?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted small">None</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
+                                    <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
+                                    <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
+                                </td>
+                                <td class="text-dark search-target"><?= htmlspecialchars($doc['subject']) ?></td>
+
+                                <td class="text-truncate small search-target" style="max-width: 200px;" title="<?= htmlspecialchars($doc['address_name'] ?? '') ?>">
+                                    <?= htmlspecialchars($doc['address_name'] ?? '---') ?>
+                                </td>
+
+                                <td class="small search-target"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? '---'))) ?></td>
+                                <td class="d-none class-target"><?= htmlspecialchars($doc['class_name']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php include BASE_PATH . 'includes/page.php'; ?>
     </div>
-    <?php include BASE_PATH . 'includes/page.php'; ?>
-</div>
 </div>
 
 <div class="modal fade" id="newDocModal" tabindex="-1" aria-hidden="true">
@@ -208,13 +192,101 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
 
             <div class="modal-body px-4 py-4">
-                <form method="POST" action="../../controllers/Outgoing.php" enctype="multipart/form-data">
+                <form method="POST" action="../../controllers/outgoing.php" enctype="multipart/form-data" id="createDocumentForm">
                     <input type="hidden" name="action" value="create_document">
+                    <input type="hidden" name="hidden_classification" id="hidden_classification" value="">
 
-                    <div class="row g-3 mb-3">
+                    <div class="form-section bg-light border p-3 rounded mb-3">
+                        <label class="form-label fw-bold text-primary mb-3 small"><i class="fa-solid fa-map-location-dot me-1"></i> Address Information (Destination) *</label>
+                        <select class="form-select custom-input mb-3" name="route_type" id="routeType" required>
+                            <option value="" selected disabled>Select Destination Type...</option>
+                            <option value="division">Division / Personnel (Internal)</option>
+                            <option value="group">Distribution Group</option>
+                            <option value="within_dti">Within DTI (Other Branches)</option>
+                            <option value="outside_dti">Outside Offices / External Agency</option>
+                        </select>
+
+                        <div id="block-division" class="routing-block d-none">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <select class="form-select custom-input" id="routeDivision" name="route_division">
+                                        <option value="">1. Select Division...</option>
+                                        <?php foreach ($divisions as $div): ?>
+                                            <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div id="routeUsersContainer" class="checkbox-container">
+                                        <span class="text-muted small">Select division first...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="block-group" class="routing-block d-none">
+                            <select class="form-select custom-input" name="route_group" id="route_group">
+                                <option value="">Select Distribution Group...</option>
+                                <?php foreach ($groups as $grp): ?>
+                                    <option value="<?= $grp['id'] ?>"><?= htmlspecialchars($grp['group_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div id="block-dtibranch" class="routing-block d-none">
+                            <div id="dti-recipient-container">
+                                <div class="dti-recipient-row bg-white border rounded p-3 mb-2 position-relative shadow-sm">
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <select class="form-select custom-input dti-branch-input" name="dti_branch[]">
+                                                <option value="">Select DTI Branch...</option>
+                                                <?php foreach ($dti_branches as $branch): ?>
+                                                    <option value="<?= $branch['id'] ?>"><?= htmlspecialchars($branch['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control custom-input dti-contact-input" name="dti_contact[]" placeholder="Contact Person">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control custom-input" name="dti_notes[]" placeholder="Notes (Optional)">
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-recipient-btn d-none" onclick="removeRow(this)"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold mt-1" onclick="addRecipientRow('dti-recipient-container')"><i class="fa-solid fa-plus me-1"></i> Add Another Recipient</button>
+                        </div>
+
+                        <div id="block-external" class="routing-block d-none">
+                            <div id="ext-recipient-container">
+                                <div class="ext-recipient-row bg-white border rounded p-3 mb-2 position-relative shadow-sm">
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <input type="text" class="form-control custom-input ext-office-input" name="ext_office[]" placeholder="Office / Agency Name">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control custom-input ext-contact-input" name="out_ext_name[]" placeholder="Contact Person (Optional)">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" class="form-control custom-input" name="out_notes[]" placeholder="Notes (Optional)">
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-recipient-btn d-none" onclick="removeRow(this)"><i class="fa-solid fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold mt-1" onclick="addRecipientRow('ext-recipient-container')"><i class="fa-solid fa-plus me-1"></i> Add Another Recipient</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3 mt-1">
                         <div class="col-md-4">
                             <label class="modal-label">Classification *</label>
-                            <select class="form-select custom-input" name="classification" required>
+                            <select class="form-select custom-input" name="classification" id="classification" required>
                                 <option value="" selected disabled>Select...</option>
                                 <?php foreach ($classifications as $item): ?>
                                     <option value="<?= $item['id'] ?>"><?= htmlspecialchars($item['name']) ?></option>
@@ -241,55 +313,6 @@ require_once BASE_PATH . 'includes/header.php';
                         <textarea name="subject" class="form-control custom-input" rows="2" placeholder="Enter document subject..." required></textarea>
                     </div>
 
-                    <div class="form-section bg-light border p-3 rounded mb-3">
-                        <label class="form-label fw-bold text-primary mb-3 small"><i class="fa-solid fa-route me-1"></i> Address</label>
-                        <select class="form-select custom-input mb-3" name="route_type" id="routeType" required>
-                            <option value="" selected disabled>Select Routing Path...</option>
-                            <option value="division">Personnel (Internal)</option>
-                            <option value="group">Group (Distribution)</option>
-                            <option value="within_dti">Within DTI (Other Branch)</option>
-                            <option value="outside_dti">Outside Agency (External)</option>
-                        </select>
-
-                        <div id="block-division" class="routing-block d-none">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <select class="form-select custom-input" id="routeDivision" name="route_division">
-                                        <option value="">1. Select Division...</option>
-                                        <?php foreach ($divisions as $div): ?>
-                                            <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['name']) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <div id="routeUsersContainer" class="checkbox-container">
-                                        <span class="text-muted small">Select division first...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="block-group" class="routing-block d-none">
-                            <select class="form-select custom-input" name="route_group">
-                                <option value="">Select Distribution Group...</option>
-                                <?php foreach ($groups as $grp): ?>
-                                    <option value="<?= $grp['id'] ?>"><?= htmlspecialchars($grp['group_name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div id="block-external" class="routing-block d-none">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control custom-input" name="ext_office" placeholder="Office / Agency Name">
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control custom-input" name="ext_name" placeholder="Contact Person">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="modal-label">Signatory (Optional)</label>
@@ -301,13 +324,13 @@ require_once BASE_PATH . 'includes/header.php';
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="modal-label">Particulars</label>
+                            <label class="modal-label">Particulars (Optional)</label>
                             <input type="text" name="particulars" class="form-control custom-input" placeholder="Additional details">
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="modal-label">Attachments <span class="text-danger">*</span></label>
+                        <label class="modal-label">Attachments</label>
 
                         <div class="drag-drop-box" id="dropZone" style="cursor: pointer; border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px;">
                             <div class="upload-content text-center w-100">
@@ -316,21 +339,15 @@ require_once BASE_PATH . 'includes/header.php';
                                     <span class="fw-bold text-dark">Click to upload</span> or drag and drop<br>
                                     <small>Maximum size: 10MB</small>
                                 </span>
-
-                                <input type="file" id="fileInput" name="document_files[]" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display: none;">
-
+                                <input type="file" id="fileInput" name="document_files[]" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display: none;">
                                 <div id="fileQueueDisplay" class="mt-3 text-start w-100"></div>
                             </div>
-                        </div>
-
-                        <div id="fileError" class="text-danger small mt-1" style="display: none;">
-                            <i class="fa-solid fa-circle-exclamation me-1"></i> Please attach at least one file.
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                         <button type="button" class="btn btn-cancel" data-bs-toggle="modal" data-bs-target="#cancelConfirmModal">Cancel</button>
-                        <button type="submit" class="btn btn-blue px-4">Create & Route</button>
+                        <button type="submit" class="btn btn-blue px-4" id="btnFakeSubmit">Create & Route</button>
                     </div>
                 </form>
             </div>
@@ -358,30 +375,5 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
-<div class="modal fade" id="lockedModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content custom-modal" style="border: 2px solid #f59e0b;">
-            <div class="modal-body text-center p-4">
-                <i class="fa-solid fa-lock text-warning mb-3" style="font-size: 3rem;"></i>
-                <h5 class="fw-bold text-dark">Document Locked</h5>
-                <p class="text-muted" style="font-size: 0.9rem;">
-                    Document <b id="lockedDtsNo"></b> has already been approved and can no longer be modified.
-                </p>
-                <div class="mt-4">
-                    <button type="button" class="btn btn-warning fw-bold w-100" data-bs-dismiss="modal">Understood</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof TableFilter !== 'undefined') {
-        new TableFilter('.doc-row');
-    }
-});
-</script>
 
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

@@ -20,6 +20,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // NEW: Branch Modal logic
+    const editBranchModal = document.getElementById('editBranchModal');
+    if (editBranchModal) {
+        editBranchModal.addEventListener('show.bs.modal', function(e) {
+            document.getElementById('editBranchId').value = e.relatedTarget.dataset.id;
+            document.getElementById('editBranchName').value = e.relatedTarget.dataset.name;
+        });
+    }
+
     const editDivisionModal = document.getElementById('editDivisionModal');
     if (editDivisionModal) {
         editDivisionModal.addEventListener('show.bs.modal', function(e) {

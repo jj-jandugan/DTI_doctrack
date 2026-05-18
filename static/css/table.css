@@ -10,8 +10,9 @@
 }
 
 .data-table {
-    min-width: 1350px; /* Slightly increased to accommodate the wider subject column */
+    width: 100%; /* FIX: Replaced the massive min-width so it scales with the screen */
     border-collapse: collapse;
+    table-layout: auto;
 }
 
 .clickable-row {
@@ -49,7 +50,7 @@
 }
 
 .table-responsive {
-    overflow: auto;
+    overflow-x: auto; /* Allows shrinking without breaking container */
     overflow-y: visible;
 }
 

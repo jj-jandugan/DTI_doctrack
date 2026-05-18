@@ -14,15 +14,22 @@ $user_id = $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_document') {
     try {
+        // --- BULLETPROOF FOLDER FIX ---
+        // Guarantees the uploads folder exists before DocumentManager tries to save to it
+        $upload_dir = '../uploads/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+
         // 1. Instantiate the DocumentManager
         $docManager = new DocumentManager($pdo);
 
         // 2. Safely grab the uploaded files
         $files = isset($_FILES['document_files']) ? $_FILES['document_files'] : ['name' => []];
 
-        // 3. FIX: Explicitly map the form data to ensure arrays (like checkboxes) and external addresses are never dropped!
+        // 3. Explicitly map the form data to ensure arrays (like checkboxes) and external addresses are never dropped!
         $data = [
-            'classification' => $_POST['classification'] ?? '',
+            'classification' => !empty($_POST['classification']) ? $_POST['classification'] : ($_POST['hidden_classification'] ?? ''),
             'document_type'  => $_POST['document_type'] ?? '',
             'due_date'       => $_POST['due_date'] ?? null,
             'subject'        => trim($_POST['subject'] ?? ''),
@@ -30,12 +37,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'signatory'      => $_POST['signatory'] ?? '',
             'route_type'     => $_POST['route_type'] ?? '',
             'route_division' => $_POST['route_division'] ?? '',
-            'route_users'    => isset($_POST['route_users']) ? $_POST['route_users'] : [], // <-- Captures all Receivers
+            'route_users'    => isset($_POST['route_users']) ? $_POST['route_users'] : [],
             'route_group'    => $_POST['route_group'] ?? '',
-            'ext_office'     => trim($_POST['ext_office'] ?? ''), // <-- Captures External Office Address
-            'ext_name'       => trim($_POST['ext_name'] ?? '')    // <-- Captures External Contact Person
-        ];
 
+            // THESE ARE NOW ARRAYS [] TO HANDLE MULTIPLE ROWS
+            'dti_branch'     => $_POST['dti_branch'] ?? [],
+            'dti_contact'    => $_POST['dti_contact'] ?? [],
+            'dti_notes'      => $_POST['dti_notes'] ?? [],
+
+            'ext_office'     => $_POST['ext_office'] ?? [],
+            'out_ext_name'   => $_POST['out_ext_name'] ?? [],
+            'out_notes'      => $_POST['out_notes'] ?? []
+        ];
+        
         // 4. Pass the strictly formatted $data array to the DocumentManager
         $dts_no = $docManager->createDocument($user_id, $data, $files);
 
@@ -56,3 +70,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     header("Location: ../login.php");
     exit;
 }
+?>

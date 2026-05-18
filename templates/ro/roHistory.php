@@ -21,7 +21,9 @@ try {
     $doc_types       = $docManager->getDocumentTypes();
     $classifications = $docManager->getClassifications();
     $history_docs    = $docManager->getROHistory($user_id);
-    $all_attachments = $docManager->getAllAttachmentsGrouped();
+
+    // We no longer need all attachments here since we redirect to the view page
+    // $all_attachments = $docManager->getAllAttachmentsGrouped();
 
     // BUILD THE JSON PAYLOAD FOR THE EXCEL EXPORT
     $export_payload = [];
@@ -59,7 +61,7 @@ try {
             'class'     => $doc['classification'] ?? 'N/A',
             'type'      => $doc['doc_type'] ?? 'N/A',
             'subject'   => $doc['subject'],
-            'sender'    => $sender,  /* <--- This will now push the Origin into the Excel file */
+            'sender'    => $sender,
             'receiver'  => $receiver,
             'signatory' => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
             'status'    => $doc['status_name'],
@@ -86,7 +88,9 @@ $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/filter.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/document.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/accept_docu.css">
-<link rel="stylesheet" href="' . BASE_URL . 'static/css/panel.css">
+<style>
+    .history-row:hover { background-color: #f8fafc !important; }
+</style>
 ';
 
 $extra_js = '
@@ -94,7 +98,6 @@ $extra_js = '
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="' . BASE_URL . 'static/js/export.js"></script>
 <script src="' . BASE_URL . 'static/js/filters.js"></script>
-<script src="' . BASE_URL . 'static/js/history_panel.js"></script>
 ';
 
 require_once BASE_PATH . 'includes/header.php';
@@ -163,195 +166,101 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 
-    <div class="split-layout-container" id="mainSplitLayout">
-        <div class="table-section">
-            <div class="table-container p-0 border-0 shadow-none">
-                <div class="table-responsive">
-                    <table class="data-table" id="historyTable">
-                        <thead>
-                            <tr>
-                                <th>DTS NO.</th>
-                                <th>STATUS</th>
-                                <th>DATE & TIME CREATED</th>
-                                <th>LAST UPDATE</th>
-                                <th>ORIGIN</th>
-                                <th>ADDRESS</th>
-                                <th">SUBJECT</th>
-                                <th>SIGNATORY</th>
-                                <th>ENCODED BY</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($history_docs)): ?>
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted py-5">
-                                        <i class="fa-solid fa-folder-open mb-3 opacity-25" style="font-size: 3rem;"></i><br>
-                                        <h6 class="fw-bold text-secondary">History is Empty</h6>
-                                        <p style="font-size: 0.9rem;">Documents you have processed or dispatched will appear here.</p>
-                                    </td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($history_docs as $doc):
-                                    $doc_attachments = isset($all_attachments[$doc['id']]) ? $all_attachments[$doc['id']] : [];
-                                    $json_attachments = json_encode($doc_attachments);
-                                ?>
-                                <tr class="fw-bold history-row clickable-row" style="cursor: pointer;"
-                                    data-dts="<?= htmlspecialchars($doc['dts_no']) ?>"
-                                    data-status="<?= htmlspecialchars($doc['status_name']) ?>"
-                                    data-statusclass="status <?= strtolower(str_replace(' ', '-', $doc['status_category'])) ?>"
-                                    data-created="<?= date('m/d/Y', strtotime($doc['created_at'])) ?>"
-                                    data-createdfull="<?= date('F d, Y g:i A', strtotime($doc['created_at'])) ?>"
-                                    data-received="<?= !empty($doc['updated_at']) ? date('M d, Y g:i A', strtotime($doc['updated_at'])) : 'N/A' ?>"
-                                    data-deadline="<?= !empty($doc['due_date']) ? date('m/d/Y', strtotime($doc['due_date'])) : 'None' ?>"
-                                    data-class="<?= htmlspecialchars($doc['classification'] ?? 'N/A') ?>"
-                                    data-type="<?= htmlspecialchars($doc['doc_type'] ?? 'N/A') ?>"
-                                    data-subject="<?= htmlspecialchars($doc['subject']) ?>"
-                                    data-address="<?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>"
-                                    data-particulars="<?= htmlspecialchars($doc['particulars'] ?? 'No additional details provided.') ?>"
-                                    data-signatory="<?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None'))) ?>"
-                                    data-creator="<?= htmlspecialchars(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')) ?>"
-                                    data-creatordiv="<?= htmlspecialchars($doc['c_division'] ?? 'System User') ?>"
-                                    data-sender="<?= htmlspecialchars(!empty($doc['sender']) ? trim($doc['sender']) : 'N/A') ?>"
-                                    data-origin="<?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?>"
-                                    data-rejectreason="<?= htmlspecialchars($doc['reject_reason'] ?? '') ?>"
-                                    data-receiver="<?= htmlspecialchars($doc['receiver_name'] ?? 'N/A') ?>"
-                                    data-direction="<?= strtolower($doc['doc_direction'] ?? '') ?>"
-                                    data-attachments='<?= htmlspecialchars($json_attachments, ENT_QUOTES, 'UTF-8') ?>'>
+    <div class="bg-white border rounded shadow-sm p-0 mb-4">
+        <div class="table-responsive">
+            <table class="data-table" id="historyTable" style="margin: 0; width: 100%;">
+                <thead>
+                    <tr>
+                        <th>DTS NO.</th>
+                        <th>STATUS</th>
+                        <th>DATE & TIME CREATED</th>
+                        <th>LAST UPDATE</th>
+                        <th>ORIGIN</th>
+                        <th>ADDRESS</th>
+                        <th>SUBJECT</th>
+                        <th>SIGNATORY</th>
+                        <th>ENCODED BY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($history_docs)): ?>
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5 border-bottom-0">
+                                <i class="fa-solid fa-folder-open mb-3 opacity-25" style="font-size: 3rem;"></i><br>
+                                <h6 class="fw-bold text-secondary">History is Empty</h6>
+                                <p class="mb-0" style="font-size: 0.9rem;">Documents you have processed or dispatched will appear here.</p>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($history_docs as $doc): ?>
+                        <tr class="fw-bold history-row" style="cursor: pointer; transition: background 0.2s;" onclick="window.location.href='roViewHist.php?id=<?= $doc['id'] ?>'">
 
-                                    <td class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                                    <td>
-                                        <span class="status <?= strtolower(str_replace(' ', '-', $doc['status_category'])) ?> status-target">
-                                            <?= htmlspecialchars($doc['status_name']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
-                                        <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
-                                        <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($doc['updated_at'])): ?>
-                                            <div class="text-dark"><?= date('M d, Y', strtotime($doc['updated_at'])) ?></div>
-                                            <div class="small text-muted"><?= date('h:i A', strtotime($doc['updated_at'])) ?></div>
-                                        <?php else: ?>
-                                            <span class="text-muted">N/A</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="search-target">
-                                        <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?>"><?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?></div>
-                                        <div class="text-muted" style="font-size: 0.8rem;"><?= !empty($doc['sender']) ? htmlspecialchars(trim($doc['sender'])) : 'N/A' ?></div>
-                                    </td>
-                                    <td class="search-target">
-                                        <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>">
-                                            <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
-                                        </div>
-                                        <?php if (!empty($doc['receiver_name'])): ?>
-                                            <div class="text-muted" style="font-size: 0.8rem;">
-                                                <?= htmlspecialchars($doc['receiver_name']) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="text-dark search-target text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($doc['subject']) ?>">
-                                        <?= htmlspecialchars($doc['subject']) ?>
-                                    </td>
-                                    <td class="small"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None'))) ?></td>
-                                    <td class="search-target">
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center me-2 flex-shrink-0" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                                                <i class="fa-solid fa-user"></i>
-                                            </div>
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-bold text-dark" style="font-size: 0.85rem;"><?= htmlspecialchars(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')) ?></span>
-                                                <span class="text-muted" style="font-size: 0.7rem; font-weight: normal; line-height: 1.1;"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="d-none type-target"><?= htmlspecialchars($doc['doc_type'] ?? '') ?></td>
-                                    <td class="d-none class-target"><?= htmlspecialchars($doc['classification'] ?? '') ?></td>
-                                    <td class="d-none direction-target"><?= strtolower($doc['doc_direction'] ?? '') ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="pagination-container" class="d-flex justify-content-end mt-3"></div>
-            </div>
-        </div>
-
-        <div class="side-panel-section" id="sidePanel">
-            <div class="panel-inner-content detail-card shadow-none border-0 rounded-0 h-100 m-0">
-                <div class="detail-header d-flex justify-content-between align-items-center mb-4 p-4 border-bottom position-sticky top-0 bg-white" style="z-index: 10;">
-                    <div>
-                        <h5 class="fw-bold mb-1">DTS No. <span class="text-primary" id="paneCtrl"></span></h5>
-                        <span id="paneStatus"></span>
-                    </div>
-                    <button type="button" class="btn-close shadow-none" id="closePanelBtn" aria-label="Close"></button>
-                </div>
-
-                <div class="p-4 overflow-auto flex-grow-1">
-                    <div id="rejectionReasonBlock" class="alert alert-danger d-none mb-4" style="border-left: 4px solid #dc3545;">
-                        <h6 class="fw-bold mb-1"><i class="fa-solid fa-circle-xmark me-2"></i>Reason for Rejection:</h6>
-                        <p class="mb-0 small" id="paneRejectReason"></p>
-                    </div>
-
-                    <div class="attachment-section mb-4">
-                        <div class="accordion" id="attachmentAccordion">
-                            <div class="accordion-item border-0">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed fw-bold custom-accordion-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments">
-                                        Attachments (<span id="paneAttachCount">0</span>)
-                                    </button>
-                                </h2>
-                                <div id="collapseAttachments" class="accordion-collapse collapse" data-bs-parent="#attachmentAccordion">
-                                    <div class="accordion-body p-0 pt-2" id="paneAttachments"></div>
+                            <td class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no']) ?></td>
+                            <td>
+                                <span class="status <?= strtolower(str_replace(' ', '-', $doc['status_category'])) ?> status-target">
+                                    <?= htmlspecialchars($doc['status_name']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
+                                <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
+                                <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
+                            </td>
+                            <td>
+                                <?php if (!empty($doc['updated_at'])): ?>
+                                    <div class="text-dark"><?= date('M d, Y', strtotime($doc['updated_at'])) ?></div>
+                                    <div class="small text-muted"><?= date('h:i A', strtotime($doc['updated_at'])) ?></div>
+                                <?php else: ?>
+                                    <span class="text-muted">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="search-target">
+                                <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?>"><?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?></div>
+                                <div class="text-muted" style="font-size: 0.8rem;"><?= !empty($doc['sender']) ? htmlspecialchars(trim($doc['sender'])) : 'N/A' ?></div>
+                            </td>
+                            <td class="search-target">
+                                <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>">
+                                    <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                                <?php if (!empty($doc['receiver_name'])): ?>
+                                    <div class="text-muted" style="font-size: 0.8rem;">
+                                        <?= htmlspecialchars($doc['receiver_name']) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-dark search-target text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($doc['subject']) ?>">
+                                <?= htmlspecialchars($doc['subject']) ?>
+                            </td>
+                            <td class="small"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None'))) ?></td>
+                            <td class="search-target">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center me-2 flex-shrink-0" style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                        <i class="fa-solid fa-user"></i>
+                                    </div>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;"><?= htmlspecialchars(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')) ?></span>
+                                        <span class="text-muted" style="font-size: 0.7rem; font-weight: normal; line-height: 1.1;"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></span>
+                                    </div>
+                                </div>
+                            </td>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6"><div class="data-group"><label>Last Updated</label><p class="data-value text-success fw-bold" id="paneReceived"></p></div></div>
-                        <div class="col-md-6"><div class="data-group"><label>Deadline</label><p class="data-value text-danger fw-bold" id="paneDeadline"></p></div></div>
-                    </div>
+                            <td class="d-none type-target"><?= htmlspecialchars($doc['doc_type'] ?? '') ?></td>
+                            <td class="d-none class-target"><?= htmlspecialchars($doc['classification'] ?? '') ?></td>
+                            <td class="d-none direction-target"><?= strtolower($doc['doc_direction'] ?? '') ?></td>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4"><div class="data-group"><label>Classification</label><p class="data-value" id="paneClass"></p></div></div>
-                        <div class="col-md-4"><div class="data-group"><label>Document Type</label><p class="data-value" id="paneType"></p></div></div>
-                        <div class="col-md-4"><div class="data-group"><label>Signatory</label><p class="data-value" id="paneSignatory"></p></div></div>
-                    </div>
-
-                    <div class="row mb-4"><div class="col-12"><div class="data-group"><label>Subject</label><div class="data-value textarea-style" id="paneSubject"></div></div></div></div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6"><div class="data-group"><label>Origin</label><p class="data-value" id="paneOrigin"></p></div></div>
-                        <div class="col-md-6"><div class="data-group"><label>Sender Name</label><p class="data-value" id="paneSender"></p></div></div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6"><div class="data-group"><label>Address (Office/Division)</label><div class="data-value textarea-style" id="paneAddress"></div></div></div>
-                        <div class="col-md-6"><div class="data-group"><label>Receiver Name</label><div class="data-value textarea-style" id="paneReceiverName"></div></div></div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-12"><div class="data-group"><label>Particulars</label><div class="data-value textarea-style" id="paneParticulars"></div></div></div>
-                    </div>
-
-                    <div class="footer-action-container pt-4 border-top mt-4 d-flex justify-content-between align-items-end pb-3">
-                        <div class="created-info">
-                            <p class="mb-0 text-muted" style="font-size: 0.85rem;">Encoded by: <span class="fw-bold" id="paneCreatorName"></span></p>
-                            <p class="mb-0 text-muted" style="font-size: 0.85rem;" id="paneCreatorDiv"></p>
-                            <p class="mb-0 text-muted" style="font-size: 0.85rem;" id="paneCreatorDate"></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
+        <div id="pagination-container" class="d-flex justify-content-end p-3 border-top bg-light"></div>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Initializes the filtering logic
         if (typeof TableFilter !== 'undefined') {
             new TableFilter('.history-row');
         }

@@ -1,151 +1,211 @@
 // static/js/create_document.js
 
+// ==========================================
+// DYNAMIC ADD/REMOVE RECIPIENTS SCRIPT (OUTGOING)
+// ==========================================
+window.addRecipientRow = function(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const template = container.firstElementChild;
+    const newRow = template.cloneNode(true);
+
+    newRow.querySelectorAll('input').forEach(input => input.value = '');
+    newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+
+    const removeBtn = newRow.querySelector('.remove-recipient-btn');
+    if (removeBtn) removeBtn.classList.remove('d-none');
+
+    newRow.style.opacity = '0';
+    newRow.style.transition = 'opacity 0.2s ease-in-out';
+    container.appendChild(newRow);
+
+    setTimeout(() => newRow.style.opacity = '1', 50);
+};
+
+window.removeRow = function(button) {
+    const row = button.closest('.bg-white.border.rounded');
+    if (!row) return;
+
+    row.style.transition = 'opacity 0.2s ease-in-out';
+    row.style.opacity = '0';
+    setTimeout(() => row.remove(), 200);
+};
+
+// ==========================================
+// MAIN DOM LOADED EVENT
+// ==========================================
 document.addEventListener('DOMContentLoaded', function() {
 
-    // ==========================================
-    // 1. GLOBAL MODAL CLEANUP (Fixes the Logout Block Issue)
-    // ==========================================
-    // This listens to every modal. When ANY modal finishes closing, it wipes stuck backgrounds.
+    // 1. GLOBAL MODAL CLEANUP (Fixes stuck logout backgrounds)
     document.addEventListener('hidden.bs.modal', function () {
-        // Check if there are any other modals still open on the screen
         if (!document.querySelector('.modal.show')) {
-            // Forcefully remove any stuck invisible backgrounds
             document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-
-            // Remove the Bootstrap lock class from the body
             document.body.classList.remove('modal-open');
-
-            // Reset scrolling and padding
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
         }
     });
 
-    // ==========================================
-    // 2. TABLE FILTERING
-    // ==========================================
-    if (typeof TableFilter !== 'undefined') {
-        new TableFilter('.doc-row');
+    // 2. TABLE FILTERING & UPLOADER
+    if (typeof TableFilter !== 'undefined') new TableFilter('.doc-row');
+    if(document.getElementById('dropZone')) window.uploader = new UploadQueue('dropZone', 'fileInput', 'fileQueueDisplay');
+
+    // 3. CACHE CLASSIFICATIONS
+    const classSelect = document.getElementById('classification');
+    const classHidden = document.getElementById('hidden_classification');
+    let internalId = "", externalId = "";
+    if (classSelect) {
+        Array.from(classSelect.options).forEach(opt => {
+            if (opt.text.toLowerCase().includes('internal')) internalId = opt.value;
+            if (opt.text.toLowerCase().includes('external')) externalId = opt.value;
+        });
     }
 
     // ==========================================
-    // 3. UPLOAD QUEUE & FORM VALIDATION
+    // 4. OUTGOING LOGIC (Destination -> Classification)
     // ==========================================
-    const form = document.querySelector('form');
-    const dropZone = document.getElementById('dropZone');
-    const fileError = document.getElementById('fileError');
+    const routeTypeSelect = document.getElementById('routeType');
+    if (routeTypeSelect) {
+        routeTypeSelect.addEventListener('change', function() {
+            document.querySelectorAll('.routing-block').forEach(el => el.classList.add('d-none'));
 
-    if (typeof UploadQueue !== 'undefined') {
-        window.uploader = new UploadQueue("dropZone", "fileInput", "fileQueueDisplay", "dropZoneText");
+            const routeDiv = document.getElementById('routeDivision');
+            const routeGrp = document.getElementById('route_group');
+            const dtiInput = document.querySelector('#dti-recipient-container .dti-branch-input');
+            const extInput = document.querySelector('#ext-recipient-container .ext-office-input');
+
+            if(routeDiv) routeDiv.required = false;
+            if(routeGrp) routeGrp.required = false;
+            if (dtiInput) dtiInput.required = false;
+            if (extInput) extInput.required = false;
+
+            const val = this.value;
+
+            if (val === 'division' || val === 'group') {
+                if (val === 'division') {
+                    document.getElementById('block-division').classList.remove('d-none');
+                    if(routeDiv) routeDiv.required = true;
+                } else {
+                    document.getElementById('block-group').classList.remove('d-none');
+                    if(routeGrp) routeGrp.required = true;
+                }
+
+                if (classSelect) { classSelect.style.pointerEvents = 'auto'; classSelect.classList.remove('bg-light'); }
+                if (classHidden) classHidden.value = "";
+            }
+            else if (val === 'within_dti') {
+                document.getElementById('block-dtibranch').classList.remove('d-none');
+                if (dtiInput) dtiInput.required = true;
+                if (classSelect) { classSelect.value = internalId; classSelect.style.pointerEvents = 'none'; classSelect.classList.add('bg-light'); }
+                if (classHidden) classHidden.value = internalId;
+            }
+            else if (val === 'outside_dti') {
+                document.getElementById('block-external').classList.remove('d-none');
+                if (extInput) extInput.required = true;
+                if (classSelect) { classSelect.value = externalId; classSelect.style.pointerEvents = 'none'; classSelect.classList.add('bg-light'); }
+                if (classHidden) classHidden.value = externalId;
+            }
+        });
     }
 
-    if (form && dropZone && fileError) {
-        form.addEventListener('submit', (e) => {
-            const hasFiles = window.uploader && window.uploader.queue && window.uploader.queue.length > 0;
+    // ==========================================
+    // 5. INCOMING LOGIC (Origin -> Classification)
+    // ==========================================
+    const originTypeSelect = document.getElementById('originType');
+    if (originTypeSelect) {
+        originTypeSelect.addEventListener('change', function() {
+            // Hide blocks and disable inputs inside them so they don't submit if hidden
+            document.getElementById('block-origin-dti').classList.add('d-none');
+            document.getElementById('block-origin-ext').classList.add('d-none');
 
-            // If no files attached, stop submission and show red warning box
-            if (!hasFiles) {
-                e.preventDefault();
-                e.stopPropagation();
+            document.querySelectorAll('#block-origin-dti input, #block-origin-dti select').forEach(el => { el.disabled = true; el.required = false; });
+            document.querySelectorAll('#block-origin-ext input, #block-origin-ext select').forEach(el => { el.disabled = true; el.required = false; });
 
-                fileError.style.display = 'block';
-                dropZone.style.borderColor = '#dc3545'; // Bootstrap red
-                dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const val = this.value;
+
+            if (val === 'within_dti') {
+                document.getElementById('block-origin-dti').classList.remove('d-none');
+                document.querySelectorAll('#block-origin-dti input, #block-origin-dti select').forEach(el => { el.disabled = false; });
+                document.getElementById('originDti').required = true;
+
+                if (classSelect) { classSelect.value = internalId; classSelect.style.pointerEvents = 'none'; classSelect.classList.add('bg-light'); }
+                if (classHidden) classHidden.value = internalId;
+            }
+            else if (val === 'outside_dti') {
+                document.getElementById('block-origin-ext').classList.remove('d-none');
+                document.querySelectorAll('#block-origin-ext input, #block-origin-ext select').forEach(el => { el.disabled = false; });
+                document.getElementById('originExt').required = true;
+
+                if (classSelect) { classSelect.value = externalId; classSelect.style.pointerEvents = 'none'; classSelect.classList.add('bg-light'); }
+                if (classHidden) classHidden.value = externalId;
+            }
+        });
+    }
+
+    // INCOMING LOGIC: Internal Destination (Doesn't affect Classification)
+    const routeTypeIncoming = document.getElementById('routeTypeIncoming');
+    if (routeTypeIncoming) {
+        routeTypeIncoming.addEventListener('change', function() {
+            document.getElementById('block-division').classList.add('d-none');
+            document.getElementById('block-group').classList.add('d-none');
+
+            const routeDiv = document.getElementById('routeDivision');
+            const routeGrp = document.getElementById('route_group');
+            if(routeDiv) routeDiv.required = false;
+            if(routeGrp) routeGrp.required = false;
+
+            if (this.value === 'division') {
+                document.getElementById('block-division').classList.remove('d-none');
+                if(routeDiv) routeDiv.required = true;
+            } else if (this.value === 'group') {
+                document.getElementById('block-group').classList.remove('d-none');
+                if(routeGrp) routeGrp.required = true;
+            }
+        });
+    }
+
+    // ==========================================
+    // 6. POPULATE USERS BASED ON DIVISION
+    // ==========================================
+    const routeDiv = document.getElementById('routeDivision');
+    if (routeDiv) {
+        routeDiv.addEventListener('change', function() {
+            const divId = this.value;
+            const usersData = document.getElementById('usersData');
+
+            if (!usersData) return;
+
+            const usersByDiv = JSON.parse(usersData.textContent);
+            const container = document.getElementById('routeUsersContainer');
+
+            container.innerHTML = '';
+            if (usersByDiv[divId] && usersByDiv[divId].length > 0) {
+                usersByDiv[divId].forEach(user => {
+                    container.innerHTML += `
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" name="route_users[]" value="${user.id}" id="user_${user.id}">
+                            <label class="form-check-label text-dark small" for="user_${user.id}">${user.first_name} ${user.last_name}</label>
+                        </div>`;
+                });
             } else {
-                fileError.style.display = 'none';
-                dropZone.style.borderColor = '#d1d5db';
+                container.innerHTML = '<span class="text-muted small">No personnel available.</span>';
             }
         });
-
-        // Reset error when user clicks the dropzone
-        dropZone.addEventListener('click', () => {
-            fileError.style.display = 'none';
-            dropZone.style.borderColor = '#d1d5db';
-        });
     }
 
     // ==========================================
-    // 4. DYNAMIC ROUTING LOGIC
+    // 7. CUSTOM FORM VALIDATION BEFORE SUBMIT
     // ==========================================
-    const routeType = document.getElementById('routeType');
-    const blockDivision = document.getElementById('block-division');
-    const blockGroup = document.getElementById('block-group');
-    const blockExternal = document.getElementById('block-external');
-
-    const routeDivision = document.getElementById('routeDivision');
-    const usersContainer = document.getElementById('routeUsersContainer');
-    const sigSelect = document.querySelector('select[name="signatory"]');
-
-    const usersDataEl = document.getElementById('usersData');
-    const usersByDiv = usersDataEl ? JSON.parse(usersDataEl.textContent) : {};
-
-    if (routeType) {
-        routeType.addEventListener('change', function() {
-            if(blockDivision) blockDivision.classList.toggle('d-none', this.value !== 'division');
-            if(blockGroup) blockGroup.classList.toggle('d-none', this.value !== 'group');
-
-            // Show the external block if Within DTI or Outside Agency is selected
-            if(blockExternal) blockExternal.classList.toggle('d-none', !(this.value === 'within_dti' || this.value === 'outside_dti'));
-        });
-    }
-
-    // ==========================================
-    // 5. SMART PERSONNEL CHECKBOX POPULATION
-    // ==========================================
-    function populateUsers() {
-        const divId = routeDivision ? routeDivision.value : null;
-        if (!usersContainer) return;
-
-        usersContainer.innerHTML = '';
-
-        // Grab the currently selected signatory so we can hide them
-        const selectedSigId = sigSelect ? sigSelect.value : null;
-
-        if (divId && usersByDiv[divId] && usersByDiv[divId].length > 0) {
-            let userCount = 0;
-
-            usersByDiv[divId].forEach(user => {
-                // SECURITY: Never show the selected signatory in the receiver list!
-                if (String(user.id) === String(selectedSigId)) return;
-
-                userCount++;
-                const div = document.createElement('div');
-                div.className = 'form-check mb-1';
-
-                const input = document.createElement('input');
-                input.className = 'form-check-input';
-                input.type = 'checkbox';
-                input.name = 'route_users[]';
-                input.value = user.id;
-                input.id = 'user_' + user.id;
-
-                const label = document.createElement('label');
-                label.className = 'form-check-label text-dark';
-                label.setAttribute('for', 'user_' + user.id);
-                label.style.fontSize = '0.85rem';
-                label.textContent = user.first_name + ' ' + user.last_name;
-
-                div.appendChild(input);
-                div.appendChild(label);
-                usersContainer.appendChild(div);
-            });
-
-            // If the only person in the division was the Signatory, show empty message
-            if (userCount === 0) {
-                usersContainer.innerHTML = '<span class="text-muted" style="font-size: 0.85rem;">No other personnel available in this division.</span>';
+    const btnFakeSubmit = document.getElementById('btnFakeSubmit');
+    if(btnFakeSubmit) {
+        btnFakeSubmit.addEventListener('click', function(e) {
+            const form = document.getElementById('createDocumentForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+            } else {
+                form.submit();
             }
-        } else {
-            usersContainer.innerHTML = '<span class="text-muted" style="font-size: 0.85rem;">No personnel found in this division.</span>';
-        }
-    }
-
-    // Trigger checkbox rendering when the Division changes
-    if (routeDivision) {
-        routeDivision.addEventListener('change', populateUsers);
-    }
-
-    // Instantly re-render checkboxes if the Signatory changes
-    if (sigSelect) {
-        sigSelect.addEventListener('change', populateUsers);
+        });
     }
 });
