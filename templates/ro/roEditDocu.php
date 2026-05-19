@@ -151,8 +151,8 @@ require_once BASE_PATH . 'includes/header.php';
                     <div class="step <?= $step1 ?>"><div class="circle"><i class="fa-solid fa-file-import"></i></div><div class="label">Encoded</div></div>
                     <div class="step <?= $step2 ?>"><div class="circle"><i class="fa-solid fa-file-signature"></i></div><div class="label">For Approval</div></div>
                     <div class="step <?= $step3 ?>"><div class="circle"><i class="fa-solid fa-stamp"></i></div><div class="label">Approved</div></div>
-                    <div class="step <?= $step4 ?>"><div class="circle"><i class="fa-solid fa-boxes-packing"></i></div><div class="label">Waiting to Dispatch</div></div>
-                    <div class="step <?= $step5 ?>"><div class="circle"><i class="fa-solid fa-paper-plane"></i></div><div class="label">Dispatch</div></div>
+                    <div class="step <?= $step4 ?>"><div class="circle"><i class="fa-solid fa-boxes-packing"></i></div><div class="label">Waiting to be Received</div></div>
+                    <div class="step <?= $step5 ?>"><div class="circle"><i class="fa-solid fa-paper-plane"></i></div><div class="label">Received</div></div>
                 </div>
             </div>
         </div>

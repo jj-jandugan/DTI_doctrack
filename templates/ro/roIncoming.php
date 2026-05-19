@@ -252,12 +252,18 @@ require_once BASE_PATH . 'includes/header.php';
                                 <div class="col-md-5">
                                     <select class="form-select custom-input" id="routeDivision" name="route_division">
                                         <option value="">1. Select Division...</option>
-                                        <?php foreach ($divisions as $div): ?><option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['name']) ?></option><?php endforeach; ?>
+                                        <?php foreach ($divisions as $div): ?>
+                                            <option value="<?= $div['id'] ?>"><?= htmlspecialchars($div['name']) ?></option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-7"><div id="routeUsersContainer" class="checkbox-container custom-input" style="min-height: 120px;"></div></div>
+                                <div class="col-md-7">
+                                    <div id="routeUsersContainer" class="checkbox-container bg-white border rounded p-2" style="max-height: 120px; overflow-y: auto;">
+                                        <span class="text-muted small">Select division first...</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        </div>  
                         <div id="block-group" class="routing-block d-none">
                             <select class="form-select custom-input" name="route_group" id="route_group">
                                 <option value="">Select Group...</option>
