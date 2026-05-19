@@ -1,8 +1,5 @@
 // static/js/create_document.js
 
-// ==========================================
-// DYNAMIC ADD/REMOVE RECIPIENTS SCRIPT (OUTGOING)
-// ==========================================
 window.addRecipientRow = function(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -32,12 +29,9 @@ window.removeRow = function(button) {
     setTimeout(() => row.remove(), 200);
 };
 
-// ==========================================
-// MAIN DOM LOADED EVENT
-// ==========================================
 document.addEventListener('DOMContentLoaded', function() {
 
-    // 1. GLOBAL MODAL CLEANUP (Fixes stuck logout backgrounds)
+    // 1. GLOBAL MODAL CLEANUP
     document.addEventListener('hidden.bs.modal', function () {
         if (!document.querySelector('.modal.show')) {
             document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
@@ -62,9 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==========================================
     // 4. OUTGOING LOGIC (Destination -> Classification)
-    // ==========================================
     const routeTypeSelect = document.getElementById('routeType');
     if (routeTypeSelect) {
         routeTypeSelect.addEventListener('change', function() {
@@ -109,13 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ==========================================
     // 5. INCOMING LOGIC (Origin -> Classification)
-    // ==========================================
     const originTypeSelect = document.getElementById('originType');
     if (originTypeSelect) {
         originTypeSelect.addEventListener('change', function() {
-            // Hide blocks and disable inputs inside them so they don't submit if hidden
             document.getElementById('block-origin-dti').classList.add('d-none');
             document.getElementById('block-origin-ext').classList.add('d-none');
 
@@ -143,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // INCOMING LOGIC: Internal Destination (Doesn't affect Classification)
     const routeTypeIncoming = document.getElementById('routeTypeIncoming');
     if (routeTypeIncoming) {
         routeTypeIncoming.addEventListener('change', function() {
@@ -179,24 +167,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const usersByDiv = JSON.parse(usersData.textContent);
             const container = document.getElementById('routeUsersContainer');
 
+            // 1. Grab the Creator ID
+            const docCreatorIdInput = document.getElementById('docCreatorId');
+            const creatorId = docCreatorIdInput ? String(docCreatorIdInput.value) : null;
+
+            // 2. Grab ALL Signatory IDs from the dropdown options
+            const signatorySelect = document.querySelector('select[name="signatory"]');
+            const allSignatoryIds = signatorySelect ? Array.from(signatorySelect.options).map(opt => String(opt.value)).filter(val => val !== "") : [];
+
             container.innerHTML = '';
             if (usersByDiv[divId] && usersByDiv[divId].length > 0) {
-                usersByDiv[divId].forEach(user => {
-                    container.innerHTML += `
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="checkbox" name="route_users[]" value="${user.id}" id="user_${user.id}">
-                            <label class="form-check-label text-dark small" for="user_${user.id}">${user.first_name} ${user.last_name}</label>
-                        </div>`;
+
+                // NEW: Permanently filter out the Creator and ALL users who are Signatories
+                const filteredUsers = usersByDiv[divId].filter(user => {
+                    const uid = String(user.id);
+                    return uid !== creatorId && !allSignatoryIds.includes(uid);
                 });
+
+                if(filteredUsers.length > 0) {
+                    filteredUsers.forEach(user => {
+                        container.innerHTML += `
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" name="route_users[]" value="${user.id}" id="user_${user.id}">
+                                <label class="form-check-label text-dark small" for="user_${user.id}">${user.first_name} ${user.last_name}</label>
+                            </div>`;
+                    });
+                } else {
+                     container.innerHTML = '<span class="text-muted small">No other personnel available.</span>';
+                }
             } else {
                 container.innerHTML = '<span class="text-muted small">No personnel available.</span>';
             }
         });
     }
 
-    // ==========================================
     // 7. CUSTOM FORM VALIDATION BEFORE SUBMIT
-    // ==========================================
     const btnFakeSubmit = document.getElementById('btnFakeSubmit');
     if(btnFakeSubmit) {
         btnFakeSubmit.addEventListener('click', function(e) {

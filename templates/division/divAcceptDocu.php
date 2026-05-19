@@ -190,7 +190,7 @@ require_once BASE_PATH . 'includes/header.php';
                     </div>
                     <div class="step <?= $step4 ?>">
                         <div class="circle"><i class="fa-solid fa-inbox"></i></div>
-                        <div class="label">Waiting to be Receive</div>
+                        <div class="label">Waiting to be Received</div>
                     </div>
                     <div class="step <?= $step5 ?>">
                         <div class="circle">

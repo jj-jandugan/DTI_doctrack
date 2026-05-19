@@ -82,6 +82,16 @@ $step5 = ($level == 5) ? 'completed' : '';
 if ($is_rejected) { $step2 = 'danger'; }
 $progress_width = ($level == 2) ? 25 : (($level == 3) ? 50 : (($level == 4) ? 75 : (($level == 5) ? 100 : 0)));
 
+// ==========================================
+// DYNAMIC TRACKER LABELS & ICONS
+// ==========================================
+$is_to_ro = in_array($doc['route_type'] ?? '', ['outside_dti', 'within_dti']);
+$label_step4 = $is_to_ro ? 'Waiting to Dispatch' : 'Waiting to be Received';
+$label_step5 = $is_to_ro ? 'Dispatch' : 'Received';
+$icon_step4 = $is_to_ro ? '<i class="fa-solid fa-boxes-packing"></i>' : '<i class="fa-solid fa-inbox"></i>';
+$icon_step5_success = $is_to_ro ? '<i class="fa-solid fa-paper-plane"></i>' : '<i class="fa-solid fa-check-double"></i>';
+// ==========================================
+
 $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/creator.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/button.css">
@@ -147,8 +157,20 @@ require_once BASE_PATH . 'includes/header.php';
                     <div class="step <?= $step1 ?>"><div class="circle"><i class="fa-solid fa-file-import"></i></div><div class="label">Encoded</div></div>
                     <div class="step <?= $step2 ?>"><div class="circle"><i class="fa-solid fa-file-signature"></i></div><div class="label">For Approval</div></div>
                     <div class="step <?= $step3 ?>"><div class="circle"><i class="fa-solid fa-stamp"></i></div><div class="label">Approved</div></div>
-                    <div class="step <?= $step4 ?>"><div class="circle"><i class="fa-solid fa-boxes-packing"></i></div><div class="label">Waiting to Dispatch</div></div>
-                    <div class="step <?= $step5 ?>"><div class="circle"><i class="fa-solid fa-paper-plane"></i></div><div class="label">Dispatch</div></div>
+                        <div class="step <?= $step4 ?>">
+                    <div class="circle"><?= $icon_step4 ?></div>
+                    <div class="label"><?= $label_step4 ?></div>
+                </div>
+                <div class="step <?= $step5 ?>">
+                    <div class="circle">
+                        <?php if($is_rejected): ?>
+                            <i class="fa-solid fa-xmark"></i>
+                        <?php else: ?>
+                            <?= $icon_step5_success ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="label"><?= ($is_rejected) ? 'Rejected' : $label_step5 ?></div>
+                </div>
                 </div>
             </div>
         </div>
@@ -207,9 +229,11 @@ require_once BASE_PATH . 'includes/header.php';
 
             <fieldset <?= $is_locked ? 'disabled' : '' ?>>
                 <form id="editDocForm" method="POST" action="<?= $is_locked ? '#' : '../../controllers/editDocument.php' ?>" enctype="multipart/form-data" <?= $is_locked ? 'onsubmit="return false;"' : '' ?>>
-                    <input type="hidden" name="action" value="update_document">
-                    <input type="hidden" name="document_id" value="<?= htmlspecialchars($document_id) ?>">
-                    <input type="hidden" name="hidden_classification" id="hidden_classification" value="<?= $doc['classification_id'] ?>">
+                <input type="hidden" name="action" value="update_document">
+                <input type="hidden" name="document_id" value="<?= htmlspecialchars($document_id) ?>">
+                <input type="hidden" name="hidden_classification" id="hidden_classification" value="<?= $doc['classification_id'] ?>">
+
+                <input type="hidden" id="docCreatorId" value="<?= htmlspecialchars($doc['creator_id'] ?? $_SESSION['user_id']) ?>">
 
                     <div id="removedAttachmentsContainer"></div>
 

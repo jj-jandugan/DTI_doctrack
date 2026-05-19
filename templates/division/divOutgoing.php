@@ -193,10 +193,12 @@ require_once BASE_PATH . 'includes/header.php';
 
             <div class="modal-body px-4 py-4">
                 <form method="POST" action="../../controllers/outgoing.php" enctype="multipart/form-data" id="createDocumentForm">
-                    <input type="hidden" name="action" value="create_document">
-                    <input type="hidden" name="hidden_classification" id="hidden_classification" value="">
+                <input type="hidden" name="action" value="create_document">
+                <input type="hidden" name="hidden_classification" id="hidden_classification" value="">
 
-                    <div class="form-section bg-light border p-3 rounded mb-3">
+                <input type="hidden" id="docCreatorId" value="<?= $_SESSION['user_id'] ?>">
+
+                <div class="form-section bg-light border p-3 rounded mb-3">
                         <label class="form-label fw-bold text-primary mb-3 small"><i class="fa-solid fa-map-location-dot me-1"></i> Address Information (Destination) *</label>
                         <select class="form-select custom-input mb-3" name="route_type" id="routeType" required>
                             <option value="" selected disabled>Select Destination Type...</option>

@@ -78,6 +78,16 @@ $step1 = 'completed'; $step2 = ($level > 2) ? 'completed' : (($level == 2) ? 'ac
 if ($is_rejected) { if ($level <= 2) $step2 = 'danger'; elseif ($level == 3) $step3 = 'danger'; elseif ($level == 4) $step4 = 'danger'; elseif ($level == 5) $step5 = 'danger'; }
 $progress_width = ($level == 2) ? 25 : (($level == 3) ? 50 : (($level == 4) ? 75 : (($level == 5) ? 100 : 0)));
 
+// DYNAMIC TRACKER LABELS & ICONS (Based on Destination)
+$is_to_ro = in_array($doc['route_type'] ?? '', ['outside_dti', 'within_dti']);
+
+$label_step4 = $is_to_ro ? 'Waiting to Dispatch' : 'Waiting to be Received';
+$label_step5 = $is_to_ro ? 'Dispatch' : 'Received';
+
+$icon_step4 = $is_to_ro ? '<i class="fa-solid fa-boxes-packing"></i>' : '<i class="fa-solid fa-inbox"></i>';
+$icon_step5_success = $is_to_ro ? '<i class="fa-solid fa-paper-plane"></i>' : '<i class="fa-solid fa-check-double"></i>';
+// ==========================================
+
 $extra_css = '<link rel="stylesheet" href="' . BASE_URL . 'static/css/document.css"><link rel="stylesheet" href="' . BASE_URL . 'static/css/accept_docu.css"><link rel="stylesheet" href="' . BASE_URL . 'static/css/status.css"><link rel="stylesheet" href="' . BASE_URL . 'static/css/track.css"><style>.visual-stepper::before { display: none !important; }</style>';
 $extra_js = '<script src="' . BASE_URL . 'static/js/track.js"></script>';
 
@@ -105,14 +115,33 @@ require_once BASE_PATH . 'includes/header.php';
                 <div style="position: absolute; top: 15px; left: 10%; right: 10%; height: 4px; background: #e2e8f0; z-index: 1;"></div>
                 <div style="position: absolute; top: 15px; left: 10%; width: calc(80% * <?= $progress_width ?> / 100); height: 4px; background: <?= $is_rejected ? '#dc3545' : '#10b981' ?>; z-index: 2; transition: width 0.5s ease;"></div>
                 <div class="visual-stepper d-flex justify-content-between position-relative" style="z-index: 3; padding: 0;">
-                    <div class="step <?= $step1 ?>"><div class="circle"><i class="fa-solid fa-file-import"></i></div><div class="label">Encoded</div></div>
-                    <div class="step <?= $step2 ?>"><div class="circle"><i class="fa-solid fa-file-signature"></i></div><div class="label">For Approval</div></div>
-                    <div class="step <?= $step3 ?>"><div class="circle"><i class="fa-solid fa-stamp"></i></div><div class="label">Approved</div></div>
-                    <div class="step <?= $step4 ?>"><div class="circle"><i class="fa-solid fa-boxes-packing"></i></div><div class="label">Waiting Dispatch</div></div>
-                    <div class="step <?= $step5 ?>"><div class="circle"><?php if($is_rejected): ?><i class="fa-solid fa-xmark"></i><?php else: ?><i class="fa-solid fa-paper-plane"></i><?php endif; ?></div><div class="label"><?= ($is_rejected) ? 'Rejected' : 'Dispatch' ?></div></div>
+                <div class="step <?= $step1 ?>">
+                    <div class="circle"><i class="fa-solid fa-file-import"></i></div>
+                    <div class="label">Encoded</div>
+                </div>
+                <div class="step <?= $step2 ?>">
+                    <div class="circle"><i class="fa-solid fa-file-signature"></i></div>
+                    <div class="label">For Approval</div>
+                </div>
+                <div class="step <?= $step3 ?>">
+                    <div class="circle"><i class="fa-solid fa-stamp"></i></div>
+                    <div class="label">Approved</div>
+                </div>
+                <div class="step <?= $step4 ?>">
+                    <div class="circle"><?= $icon_step4 ?></div>
+                    <div class="label"><?= $label_step4 ?></div>
+                </div>
+                <div class="step <?= $step5 ?>">
+                    <div class="circle">
+                        <?php if($is_rejected): ?>
+                            <i class="fa-solid fa-xmark"></i>
+                        <?php else: ?>
+                            <?= $icon_step5_success ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="label"><?= ($is_rejected) ? 'Rejected' : $label_step5 ?></div>
                 </div>
             </div>
-        </div>
 
         <div class="border rounded p-4 mb-5 shadow-sm" style="background-color: #f8fafc;">
             <h6 class="fw-bold text-dark mb-4"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i> Activity Log Timeline</h6>

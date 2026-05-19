@@ -1,6 +1,7 @@
 <?php
 // templates/admin/manageUsers.php
 require_once '../../classes/database.php';
+require_once '../../classes/Mailer.php'; // NEW: Include the Mailer class!
 
 // Security Check
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Admin') {
@@ -35,6 +36,14 @@ if (!isset($_SESSION['temp_passwords'])) {
     $_SESSION['temp_passwords'] = [];
 }
 
+// Helper function to build the absolute login URL for emails
+function getLoginUrl() {
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'];
+    $base_dir = dirname($_SERVER['SCRIPT_NAME'], 3); // Goes up to /DTS
+    return $protocol . $host . $base_dir . '/login.php';
+}
+
 // ==========================================
 // 1. HANDLE FORM SUBMISSIONS (ADD, EDIT, DELETE)
 // ==========================================
@@ -49,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $first_name = trim($_POST['first_name']);
             $last_name = trim($_POST['last_name']);
             $middle_name = trim($_POST['middle_name']);
-            $email = trim($_POST['email']);
+            $raw_email = trim($_POST['email']); // Check if they provided an email
             $role = $_POST['role'];
             $division_id = !empty($_POST['division_id']) ? $_POST['division_id'] : null;
 
@@ -60,15 +69,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $username = $base_username . rand(100, 999);
 
                 // Handle Optional Email
-                if (empty($email)) {
+                if (empty($raw_email)) {
                     $email = $username . '@dts.local';
+                } else {
+                    $email = $raw_email;
                 }
 
                 // 2. Auto-Generate Temporary Password (e.g., DTS-A9B4F1)
                 $raw_password = 'DTS-' . strtoupper(substr(md5(uniqid()), 0, 6));
                 $hashed_password = password_hash($raw_password, PASSWORD_DEFAULT);
 
-                // Insert User
+                // Insert User (Note: must_change_password defaults to 1 per our DB schema!)
                 $stmtUser = $pdo->prepare("INSERT INTO auth_user (password, username, first_name, last_name, email, is_active, date_joined) VALUES (?, ?, ?, ?, ?, 1, NOW())");
                 $stmtUser->execute([$hashed_password, $username, $first_name, $last_name, $email]);
 
@@ -81,7 +92,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Save plain text password to the Session Vault so it persists for the Print button
                 $_SESSION['temp_passwords'][$new_user_id] = $raw_password;
 
-                $success_msg = "User successfully created! You can now click the Print button to get their credentials.";
+                // 3. SEND AUTOMATED EMAIL IF A REAL EMAIL WAS PROVIDED!
+                if (!empty($raw_email)) {
+                    $mailer = new Mailer();
+                    $login_link = getLoginUrl();
+                    $subject = "Welcome to DTI DTS - Your Account Credentials";
+                    $recipient_name = $first_name . ' ' . $last_name;
+                    $current_year = date('Y');
+
+                    $htmlBody = "
+                    <div style=\"font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px; margin: 0;\">
+                        <div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);\">
+                            <div style=\"background-color: #1d4ed8; padding: 30px 20px; text-align: center;\">
+                                <h1 style=\"color: #ffffff; margin: 0; font-size: 22px; letter-spacing: 1px;\">DTI Document Tracking System</h1>
+                            </div>
+                            <div style=\"padding: 40px 30px;\">
+                                <h2 style=\"color: #1e293b; font-size: 20px; margin-top: 0; margin-bottom: 20px;\">Welcome to the System!</h2>
+                                <p style=\"color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 20px;\">Hello <strong style=\"color: #0f172a;\">{$first_name}</strong>,</p>
+                                <p style=\"color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 20px;\">An administrator has successfully created an account for you. You can use the temporary credentials below to log in for the first time.</p>
+
+                                <div style=\"background-color: #f1f5f9; border: 1px dashed #94a3b8; border-radius: 8px; padding: 20px; margin-bottom: 30px;\">
+                                    <p style=\"margin: 0 0 10px 0; font-size: 15px; color: #334155;\"><strong>Username:</strong> <span style=\"color: #1d4ed8;\">{$username}</span></p>
+                                    <p style=\"margin: 0; font-size: 15px; color: #334155;\"><strong>Password:</strong> <span style=\"color: #dc3545; font-family: monospace; font-size: 16px;\">{$raw_password}</span></p>
+                                </div>
+
+                                <div style=\"text-align: center; margin-bottom: 30px;\">
+                                    <a href=\"{$login_link}\" style=\"background-color: #10b981; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;\">Click Here to Log In</a>
+                                </div>
+
+                                <div style=\"background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px;\">
+                                    <p style=\"color: #92400e; font-size: 14px; margin: 0; font-weight: bold;\">⚠️ Security Notice:</p>
+                                    <p style=\"color: #92400e; font-size: 13px; margin: 5px 0 0 0;\">You will be required to change both your username and password immediately upon your first successful login.</p>
+                                </div>
+                            </div>
+                            <div style=\"background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px; text-align: center;\">
+                                <p style=\"color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.5;\">&copy; {$current_year} Department of Trade and Industry.</p>
+                            </div>
+                        </div>
+                    </div>
+                    ";
+
+                    $mailer->sendEmail($email, $recipient_name, $subject, $htmlBody);
+                    $success_msg = "User successfully created! Account credentials have been emailed to <b>{$email}</b>.";
+                } else {
+                    $success_msg = "User successfully created! No email was provided, please use the Print button to share their credentials.";
+                }
+
             } else {
                 throw new Exception("Please fill in all required fields.");
             }
@@ -93,15 +149,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $first_name = trim($_POST['first_name']);
             $last_name = trim($_POST['last_name']);
             $middle_name = trim($_POST['middle_name']);
-            $email = trim($_POST['email']);
+            $raw_email = trim($_POST['email']);
             $username = trim($_POST['username']);
             $role = $_POST['role'];
             $division_id = !empty($_POST['division_id']) ? $_POST['division_id'] : null;
             $is_active = $_POST['is_active'];
 
             // Handle Optional Email
-            if (empty($email)) {
+            if (empty($raw_email)) {
                 $email = $username . '@dts.local';
+            } else {
+                $email = $raw_email;
             }
 
             $stmtUser = $pdo->prepare("UPDATE auth_user SET username = ?, first_name = ?, last_name = ?, email = ?, is_active = ? WHERE id = ?");
@@ -117,10 +175,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmtPass = $pdo->prepare("UPDATE auth_user SET password = ? WHERE id = ?");
                 $stmtPass->execute([$hashed_password, $user_id]);
 
-                // Save the newly reset password to the vault
                 $_SESSION['temp_passwords'][$user_id] = $raw_password;
 
-                $success_msg = "User updated and new password created! You can now click the Print button to get their updated credentials.";
+                // Send email about reset if email exists!
+                if (!empty($raw_email)) {
+                    $mailer = new Mailer();
+                    $login_link = getLoginUrl();
+                    $subject = "DTI DTS - Password Reset by Administrator";
+                    $htmlBody = "
+                    <div style=\"font-family: Arial, sans-serif; background-color: #f8fafc; padding: 30px;\">
+                        <div style=\"max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; border-top: 4px solid #1d4ed8;\">
+                            <h2 style=\"color: #1e293b; margin-top: 0;\">Admin Password Reset</h2>
+                            <p>Hello {$first_name}, an administrator has reset your password.</p>
+                            <div style=\"background: #f1f5f9; padding: 15px; border-radius: 6px; margin: 20px 0;\">
+                                <p style=\"margin: 0;\"><strong>Username:</strong> {$username}</p>
+                                <p style=\"margin: 5px 0 0 0;\"><strong>New Password:</strong> <span style=\"color: #dc3545;\">{$raw_password}</span></p>
+                            </div>
+                            <p><a href=\"{$login_link}\" style=\"color: #1d4ed8;\">Click here to log in</a></p>
+                        </div>
+                    </div>";
+                    $mailer->sendEmail($email, "$first_name $last_name", $subject, $htmlBody);
+                    $success_msg = "User updated! New password has been emailed to {$email}.";
+                } else {
+                    $success_msg = "User updated and new password created! Please click Print to get their updated credentials.";
+                }
             } else {
                 $success_msg = "User successfully updated!";
             }
@@ -169,25 +247,30 @@ require_once BASE_PATH . 'includes/header.php';
 
 <div class="dashboard-inner p-4">
 
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-users-gear me-2"></i> Manage System Users</h4>
         <button type="button" class="btn btn-blue" data-bs-toggle="modal" data-bs-target="#addUserModal">
             <i class="fa-solid fa-user-plus me-2"></i> Add New User
         </button>
     </div>
 
     <?php if ($success_msg): ?>
-        <div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?></div>
+        <div class="alert alert-success alert-dismissible fade show"><i class="fa-solid fa-circle-check me-2"></i><?= $success_msg ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
     <?php if ($error_msg): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
 
-    <div class="filter-container">
+    <div class="filter-container shadow-sm">
         <div class="row g-3">
             <div class="col-md-4">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search name, username, email...">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Search name, username, email...">
+                </div>
             </div>
             <div class="col-md-4">
-                <select id="roleFilter" class="form-select">
+                <select id="roleFilter" class="form-select text-secondary">
                     <option value="">Filter by Role (All)</option>
                     <option value="Admin">Admin</option>
                     <option value="RO">Records Officer (RO)</option>
@@ -197,7 +280,7 @@ require_once BASE_PATH . 'includes/header.php';
                 </select>
             </div>
             <div class="col-md-4">
-                <select id="divFilter" class="form-select">
+                <select id="divFilter" class="form-select text-secondary">
                     <option value="">Filter by Division (All)</option>
                     <?php foreach ($divisions as $div): ?>
                         <option value="<?= htmlspecialchars($div['abbreviation']) ?>"><?= htmlspecialchars($div['abbreviation']) ?></option>
@@ -207,7 +290,7 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 
-    <div class="table-container p-0">
+    <div class="table-container p-0 shadow-sm border">
         <div class="table-responsive">
             <table class="data-table" id="usersTable">
                 <thead>
@@ -226,17 +309,19 @@ require_once BASE_PATH . 'includes/header.php';
                     <tr class="user-row">
                         <td>
                             <div class="creator-cell">
-                                <div class="creator-avatar" style="width: 35px; height: 35px;"><i class="fa-solid fa-user" style="font-size: 0.9rem;"></i></div>
-                                <div class="creator-info">
-                                    <span class="creator-name fw-bold search-target"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></span>
+                                <div class="creator-avatar" style="width: 35px; height: 35px; background: #e2e8f0; color: #475569; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                    <i class="fa-solid fa-user" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="creator-info ms-2">
+                                    <span class="creator-name fw-bold text-dark search-target"><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></span>
                                 </div>
                             </div>
                         </td>
-                        <td class="search-target"><?= htmlspecialchars($user['username']) ?></td>
+                        <td class="search-target fw-bold text-secondary"><?= htmlspecialchars($user['username']) ?></td>
                         <td class="search-target">
-                            <?= strpos($user['email'], '@dts.local') !== false ? '<span class="text-muted fst-italic">None provided</span>' : htmlspecialchars($user['email']) ?>
+                            <?= strpos($user['email'], '@dts.local') !== false ? '<span class="text-muted fst-italic" style="font-size: 0.8rem;">No email provided</span>' : htmlspecialchars($user['email']) ?>
                         </td>
-                        <td class="role-target"><span class="badge bg-primary px-3 py-2 rounded-pill"><?= htmlspecialchars($user['role'] ?? 'None') ?></span></td>
+                        <td class="role-target"><span class="badge px-3 py-2 rounded-pill" style="background-color: #e0e7ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.75rem;"><?= htmlspecialchars($user['role'] ?? 'None') ?></span></td>
                         <td class="div-target">
                             <?php if ($user['division']): ?>
                                 <span class="badge bg-light text-dark border px-2 py-1"><?= htmlspecialchars($user['division']) ?></span>
@@ -246,9 +331,9 @@ require_once BASE_PATH . 'includes/header.php';
                         </td>
                         <td>
                             <?php if ($user['is_active']): ?>
-                                <span class="text-success fw-bold" style="font-size: 0.85rem;"><i class="fa-solid fa-circle me-1"></i> Active</span>
+                                <span class="text-success fw-bold" style="font-size: 0.8rem;"><i class="fa-solid fa-circle me-1" style="font-size: 0.6rem;"></i> Active</span>
                             <?php else: ?>
-                                <span class="text-danger fw-bold" style="font-size: 0.85rem;"><i class="fa-solid fa-circle me-1"></i> Inactive</span>
+                                <span class="text-danger fw-bold" style="font-size: 0.8rem;"><i class="fa-solid fa-circle me-1" style="font-size: 0.6rem;"></i> Inactive</span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -296,20 +381,21 @@ require_once BASE_PATH . 'includes/header.php';
 
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content custom-modal">
+        <div class="modal-content custom-modal" style="border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
             <div class="modal-header border-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-user-plus me-2" style="color: #263D81;"></i> Create New User</h5>
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-user-plus me-2 text-primary"></i> Create New User</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body px-4 py-4">
-                <div class="alert alert-info mb-4" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-circle-info me-2"></i> <strong>Account Details Automation:</strong> The Username and a secure Temporary Password will be <strong>automatically generated</strong>.
+                <div class="alert alert-info mb-4 shadow-sm border-0 d-flex align-items-center" style="background-color: #eff6ff; color: #1e40af;">
+                    <i class="fa-solid fa-wand-magic-sparkles fs-4 me-3 text-primary"></i>
+                    <span style="font-size: 0.9rem;">The Username and a secure Temporary Password will be <strong>automatically generated</strong>. If an email is provided, the credentials will be sent to the user instantly!</span>
                 </div>
 
                 <form method="POST" action="manageUsers.php" id="addUserForm">
                     <input type="hidden" name="action" value="add_user">
 
-                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Personal Details</h6>
+                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2" style="font-size: 0.85rem; text-transform: uppercase;">Personal Details</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4"><label class="form-label modal-label">First Name *</label><input type="text" name="first_name" class="form-control custom-input" required></div>
                         <div class="col-md-4"><label class="form-label modal-label">Middle Name</label><input type="text" name="middle_name" class="form-control custom-input"></div>
@@ -317,10 +403,13 @@ require_once BASE_PATH . 'includes/header.php';
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <div class="col-md-12"><label class="form-label modal-label">Email Address (Optional)</label><input type="email" name="email" class="form-control custom-input" placeholder="Leave blank if not available"></div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold text-success" style="font-size: 0.85rem;"><i class="fa-solid fa-envelope me-1"></i> Email Address (Highly Recommended)</label>
+                            <input type="email" name="email" class="form-control custom-input border-success" placeholder="Providing an email will automatically send the user their login credentials">
+                        </div>
                     </div>
 
-                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2">Role & Assignment</h6>
+                    <h6 class="text-muted fw-bold mb-3 border-bottom pb-2" style="font-size: 0.85rem; text-transform: uppercase;">Role & Assignment</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label modal-label">System Role *</label>
@@ -344,8 +433,8 @@ require_once BASE_PATH . 'includes/header.php';
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-check me-2"></i> Auto-Generate & Create User</button>
+                        <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-blue px-4" id="btnCreateUser"><i class="fa-solid fa-check me-2"></i> Generate & Create User</button>
                     </div>
                 </form>
             </div>
@@ -377,8 +466,8 @@ require_once BASE_PATH . 'includes/header.php';
                         <div class="col-md-4"><label class="form-label modal-label">Email (Optional)</label><input type="email" name="email" id="edit_email" class="form-control custom-input"></div>
                         <div class="col-md-4"><label class="form-label modal-label">Username *</label><input type="text" name="username" id="edit_username" class="form-control custom-input" required></div>
                         <div class="col-md-4">
-                            <label class="form-label modal-label text-primary">Reset Password</label>
-                            <input type="text" name="password" class="form-control custom-input" placeholder="Type new password to reset">
+                            <label class="form-label modal-label text-primary">Reset Password (Admin Override)</label>
+                            <input type="text" name="password" class="form-control custom-input border-primary bg-light" placeholder="Type new password to reset">
                         </div>
                     </div>
 
@@ -412,7 +501,7 @@ require_once BASE_PATH . 'includes/header.php';
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-blue px-4"><i class="fa-solid fa-floppy-disk me-2"></i> Save Changes</button>
                     </div>
                 </form>
@@ -437,7 +526,7 @@ require_once BASE_PATH . 'includes/header.php';
                     <input type="hidden" name="action" value="delete_user">
                     <input type="hidden" name="user_id" id="delete_user_id">
                     <div class="d-flex justify-content-center gap-2 pt-3 mt-2">
-                        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-danger px-4">Yes, Delete User</button>
                     </div>
                 </form>
@@ -451,7 +540,17 @@ $extra_js = "
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // 1. CLEAR 'ADD USER' FORM ON CLOSE
+    // 1. ADD LOADING EFFECT TO BUTTON
+    const addUserForm = document.getElementById('addUserForm');
+    if (addUserForm) {
+        addUserForm.addEventListener('submit', function() {
+            const btn = document.getElementById('btnCreateUser');
+            btn.disabled = true;
+            btn.innerHTML = '<i class=\"fa-solid fa-circle-notch fa-spin me-2\"></i> Generating...';
+        });
+    }
+
+    // 2. CLEAR 'ADD USER' FORM ON CLOSE
     const addUserModal = document.getElementById('addUserModal');
     if (addUserModal) {
         addUserModal.addEventListener('hidden.bs.modal', function () {
@@ -459,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. FILL EDIT MODAL
+    // 3. FILL EDIT MODAL
     const editModal = document.getElementById('editUserModal');
     if (editModal) {
         editModal.addEventListener('show.bs.modal', function (event) {
@@ -476,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. FILL DELETE MODAL
+    // 4. FILL DELETE MODAL
     const deleteModal = document.getElementById('deleteUserModal');
     if (deleteModal) {
         deleteModal.addEventListener('show.bs.modal', function (event) {
@@ -486,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 4. LIVE SEARCH & FILTER
+    // 5. LIVE SEARCH & FILTER
     const searchInput = document.getElementById('searchInput');
     const roleFilter = document.getElementById('roleFilter');
     const divFilter = document.getElementById('divFilter');
@@ -519,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if(divFilter) divFilter.addEventListener('change', filterTable);
 });
 
-// 5. PRINT CREDENTIALS FUNCTION
+// 6. PRINT CREDENTIALS FUNCTION
 function printCredentials(name, username, role, division, password) {
     const printWindow = window.open('', '_blank', 'width=600,height=450');
     printWindow.document.write(`

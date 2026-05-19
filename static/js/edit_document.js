@@ -1,6 +1,6 @@
-// Note the new 'e' parameter
+// static/js/edit_document.js
+
 function queueFileRemoval(e, attachmentId) {
-    // 1. Stop the click from triggering the dropZone file picker
     if (e) e.stopPropagation();
 
     if(confirm('Remove this attachment permanently on save?')) {
@@ -13,19 +13,14 @@ function queueFileRemoval(e, attachmentId) {
     }
 }
 
-
 document.addEventListener('DOMContentLoaded', function() {
     const backLink = document.getElementById('backToQueue');
     const cancelModalEl = document.getElementById('cancelEditModal');
 
     if (backLink && cancelModalEl) {
         const cancelModal = new bootstrap.Modal(cancelModalEl);
-
         backLink.addEventListener('click', function(e) {
-            // 1. Prevent the browser from immediately going to roIncoming.php
             e.preventDefault();
-
-            // 2. Show the "Discard Changes?" modal instead
             cancelModal.show();
         });
     }
@@ -35,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (form && saveModalEl) {
         const saveModal = new bootstrap.Modal(saveModalEl);
-
         form.addEventListener('submit', function(e) {
             if (!form.dataset.confirmed) {
                 e.preventDefault();
@@ -53,12 +47,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const routeType = document.getElementById('routeType');
     const blockDivision = document.getElementById('block-division');
     const blockGroup = document.getElementById('block-group');
-    const blockExternal = document.getElementById('block-external'); // Added the new block!
+    const blockExternal = document.getElementById('block-external');
 
     const routeDivision = document.getElementById('routeDivision');
     const usersContainer = document.getElementById('routeUsersContainer');
 
-    // Safely parse JSON injected from the backend
+    // Grabbing elements for filtering
+    const docCreatorIdInput = document.getElementById('docCreatorId');
+    const signatorySelect = document.querySelector('select[name="signatory"]');
+
     const usersDataEl = document.getElementById('usersData');
     const recipientsDataEl = document.getElementById('recipientsData');
 
@@ -69,40 +66,53 @@ document.addEventListener('DOMContentLoaded', function() {
         routeType.addEventListener('change', function() {
             if(blockDivision) blockDivision.classList.toggle('d-none', this.value !== 'division');
             if(blockGroup) blockGroup.classList.toggle('d-none', this.value !== 'group');
-
-            // Show the external block if Within DTI or Outside Agency is selected
             if(blockExternal) blockExternal.classList.toggle('d-none', !(this.value === 'within_dti' || this.value === 'outside_dti'));
         });
     }
 
     function populateUsers(divId) {
-    usersContainer.innerHTML = '';
-    if (divId && usersByDiv[divId]) {
-        usersByDiv[divId].forEach(user => {
-            const div = document.createElement('div');
-            // 'justify-content-start' ensures they don't spread out
-            div.className = 'form-check d-flex align-items-center justify-content-start mb-2';
+        usersContainer.innerHTML = '';
+        if (divId && usersByDiv[divId]) {
+            // 1. Get Creator ID
+            const creatorId = docCreatorIdInput ? String(docCreatorIdInput.value) : null;
 
-            const isChecked = currentRecipients.map(String).includes(String(user.id)) ? 'checked' : '';
+            // 2. Get ALL Signatory IDs from the dropdown options
+            const allSignatoryIds = signatorySelect ? Array.from(signatorySelect.options).map(opt => String(opt.value)).filter(val => val !== "") : [];
 
-            div.innerHTML = `
-                <input class="form-check-input mt-0" type="checkbox" name="route_users[]"
-                       value="${user.id}" id="user_${user.id}" ${isChecked}
-                       style="margin-right: 10px; cursor: pointer;">
-                <label class="form-check-label text-dark mb-0" for="user_${user.id}"
-                       style="cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
-                    ${user.first_name} ${user.last_name}
-                </label>
-            `;
-            usersContainer.appendChild(div);
-        });
-    } else {
-        usersContainer.innerHTML = '<span class="text-muted small p-2">No personnel found.</span>';
+            // NEW: Permanently filter out the Creator and ALL users who are Signatories
+            const filteredUsers = usersByDiv[divId].filter(user => {
+                const uid = String(user.id);
+                return uid !== creatorId && !allSignatoryIds.includes(uid);
+            });
+
+            if (filteredUsers.length > 0) {
+                filteredUsers.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check d-flex align-items-center justify-content-start mb-2';
+
+                    const isChecked = currentRecipients.map(String).includes(String(user.id)) ? 'checked' : '';
+
+                    div.innerHTML = `
+                        <input class="form-check-input mt-0" type="checkbox" name="route_users[]"
+                               value="${user.id}" id="user_${user.id}" ${isChecked}
+                               style="margin-right: 10px; cursor: pointer;">
+                        <label class="form-check-label text-dark mb-0" for="user_${user.id}"
+                               style="cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+                            ${user.first_name} ${user.last_name}
+                        </label>
+                    `;
+                    usersContainer.appendChild(div);
+                });
+            } else {
+                usersContainer.innerHTML = '<span class="text-muted small p-2">No other personnel available.</span>';
+            }
+        } else {
+            usersContainer.innerHTML = '<span class="text-muted small p-2">No personnel found.</span>';
+        }
     }
-}
 
     if (routeDivision) {
         routeDivision.addEventListener('change', (e) => populateUsers(e.target.value));
-        if (routeDivision.value) populateUsers(routeDivision.value); // Trigger on load if pre-filled
+        if (routeDivision.value) populateUsers(routeDivision.value);
     }
 });
