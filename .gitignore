@@ -33,6 +33,7 @@ composer.phar
 # DEVELOPMENT & RUNTIME ARTIFACTS
 # ••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 
+.env
 !var/cache/.gitkeep
 !var/logs/.gitkeep
 !var/sessions/.gitkeep
