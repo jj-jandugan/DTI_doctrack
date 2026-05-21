@@ -59,6 +59,10 @@ Rename `.env.example` to `.env` and fill its values as necessary.
 
 ### Running a local server
 
-```bash
+Run:
 
+```bash
+php -S 127.0.0.1:8000
 ```
+
+Then access the local [login page](http://127.0.0.1:8000/login.php).
