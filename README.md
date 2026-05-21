@@ -55,14 +55,7 @@ php composer.php install
 
 ### Database setup
 
-In `classes/database.php`, change the following lines as necessary:
-
-```php
-$host = '127.0.0.1';
-$dbname = 'dts_db';
-$user = 'johnsmith';
-$pass = 'samplepassword';
-```
+Rename `.env.example` to `.env` and fill its values as necessary.
 
 ### Running a local server
 
