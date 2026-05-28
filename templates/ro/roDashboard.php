@@ -2,7 +2,7 @@
 // templates/ro/roDashboard.php
 require_once '../../classes/database.php';
 require_once '../../classes/dashboard.php'; // Changed to use the main dashboard class
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 // 1. SECURITY CHECK
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'RO') {
@@ -39,11 +39,11 @@ $docManager = new DocumentManager($pdo);
 // Using the explicit RO methods
 $incoming_count = $dashboard->getROIncomingCount($user_id);
 $outgoing_count = $dashboard->getRODispatchCount($user_id);
-$overdue_count  = $dashboard->getROOverdueCount($user_id);
-$closed_count   = $dashboard->getROClosedCount($user_id);
+$overdue_count = $dashboard->getROOverdueCount($user_id);
+$closed_count = $dashboard->getROClosedCount($user_id);
 
 $count_upcoming = 0;
-$count_overdue  = 0;
+$count_overdue = 0;
 
 // ==========================================
 // FETCH CHART DATA
@@ -79,14 +79,12 @@ $js_metrics = [
 ];
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="rd-profile-header mb-4">
-        <h2 class="fw-bold text-dark mb-0"><?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
+        <h2 class="fw-bold text-dark mb-0">
+            <?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
         <p class="text-secondary fs-5 mt-1"><?= htmlspecialchars($formal_title) ?></p>
     </div>
-
     <div class="cards-grid mb-5">
         <div class="custom-card card-incoming">
             <div class="card-number"><?= $incoming_count ?></div>
@@ -105,7 +103,6 @@ require_once BASE_PATH . 'includes/header.php';
             <div class="card-info"><i class="fa-solid fa-check-double me-2"></i> Closed</div>
         </div>
     </div>
-
     <div class="row mb-5">
         <div class="col-lg-5 mb-4">
             <div class="graph-card h-100 shadow-sm border p-4 bg-white rounded">
@@ -124,71 +121,74 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
     </div>
-
     <div class="mt-5">
-    <h4 class="mb-3 fw-bold table-main-title">Today's Outgoing Documents:</h4>
-    <div class="table-container p-0 shadow-sm border rounded">
-        <div class="table-responsive">
-    <table class="data-table w-100 mb-0" style="table-layout: fixed;">
-                <thead>
-                    <tr>
-                        <th style="width: 15%;">DTS NO.</th>
-                        <th style="width: 15%;">STATUS</th>
-                        <th style="width: 20%;">DEADLINE</th>
-                        <th style="width: 30%;">SUBJECT</th>
-                        <th style="width: 20%;">CREATED BY</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recent_dispatch)): ?>
+        <h4 class="mb-3 fw-bold table-main-title">Today's Outgoing Documents:</h4>
+        <div class="table-container p-0 shadow-sm border rounded">
+            <div class="table-responsive">
+                <table class="data-table w-100 mb-0" style="table-layout: fixed;">
+                    <thead>
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-5">
-                                <i class="fa-solid fa-folder-open mb-3 opacity-25" style="font-size: 3rem;"></i>
-                                <h6 class="fw-bold text-secondary">Queue is Empty</h6>
-                                <p class="small mb-0">No approved documents are waiting to be dispatched for today.</p>
-                            </td>
+                            <th style="width: 15%;">DTS NO.</th>
+                            <th style="width: 15%;">STATUS</th>
+                            <th style="width: 20%;">DEADLINE</th>
+                            <th style="width: 30%;">SUBJECT</th>
+                            <th style="width: 20%;">CREATED BY</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach($recent_dispatch as $doc): ?>
-                        <tr class="clickable-row" onclick="window.location.href='roOutgoing.php'" style="cursor: pointer;">
-                            <td class="fw-bold text-primary text-truncate"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                            <td>
-                                <span class="status <?= strtolower($doc['status_category']) ?> small">
-                                    <?= htmlspecialchars($doc['status_name']) ?>
-                                </span>
-                            </td>
-                            <td class="small">
-                                <?php if ($doc['due_date']): ?>
-                                    <span class="text-dark"><i class="fa-regular fa-calendar-xmark me-1"></i> <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
-                                <?php else: ?>
-                                    <span class="text-muted">None</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="fw-bold text-dark text-truncate" title="<?= htmlspecialchars($doc['subject']) ?>">
-                                <?= htmlspecialchars($doc['subject']) ?>
-                            </td>
-                            <td>
-                                <div class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
-                                    <div class="creator-avatar sm me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">
-                                        <i class="fa-solid fa-building"></i>
-                                    </div>
-                                    <div class="creator-info overflow-hidden">
-                                        <span class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_division'] ?? 'Division') ?></span>
-                                        <span class="creator-role smaller d-block text-muted text-truncate"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($recent_dispatch)): ?>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="fa-solid fa-folder-open mb-3 opacity-25" style="font-size: 3rem;"></i>
+                                    <h6 class="fw-bold text-secondary">Queue is Empty</h6>
+                                    <p class="small mb-0">No approved documents are waiting to be dispatched for today.</p>
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($recent_dispatch as $doc): ?>
+                                <tr class="clickable-row" onclick="window.location.href='roOutgoing.php'"
+                                    style="cursor: pointer;">
+                                    <td class="fw-bold text-primary text-truncate"><?= htmlspecialchars($doc['dts_no']) ?></td>
+                                    <td>
+                                        <span class="status <?= strtolower($doc['status_category']) ?> small">
+                                            <?= htmlspecialchars($doc['status_name']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="small">
+                                        <?php if ($doc['due_date']): ?>
+                                            <span class="text-dark"><i class="fa-regular fa-calendar-xmark me-1"></i>
+                                                <?= date('M d, Y', strtotime($doc['due_date'])) ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">None</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="fw-bold text-dark text-truncate"
+                                        title="<?= htmlspecialchars($doc['subject']) ?>">
+                                        <?= htmlspecialchars($doc['subject']) ?>
+                                    </td>
+                                    <td>
+                                        <div class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
+                                            <div class="creator-avatar sm me-2"
+                                                style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                                <i class="fa-solid fa-building"></i>
+                                            </div>
+                                            <div class="creator-info overflow-hidden">
+                                                <span
+                                                    class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_division'] ?? 'Division') ?></span>
+                                                <span
+                                                    class="creator-role smaller d-block text-muted text-truncate"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script> const dashboardData = <?= json_encode($js_metrics) ?>; </script>
-<script src="<?= BASE_URL ?>static/js/dashboard.js"></script>
-
-<?php require_once BASE_PATH . 'includes/footer.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script> const dashboardData = <?= json_encode($js_metrics) ?>; </script>
+    <script src="<?= BASE_URL ?>static/js/dashboard.js"></script>
+    <?php require_once BASE_PATH . 'includes/footer.php'; ?>

@@ -1,7 +1,7 @@
 <?php
 // templates/division/divDashboard.php
 require_once '../../classes/database.php';
-require_once '../../classes/Dashboard.php';
+require_once '../../classes/dashboard.php';
 require_once '../../classes/documentManager.php';
 
 // 1. SECURITY CHECK

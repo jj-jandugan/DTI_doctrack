@@ -1,7 +1,7 @@
 <?php
 // templates/signatory/signDashboard.php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 require_once '../../classes/dashboard.php'; // Ensure Dashboard class is loaded
 
 // Security Check: Only 'RD' or 'ARD' role can access
@@ -42,7 +42,7 @@ $incoming_count = $dashboard->getSignatoryIncomingCount($user_id);
 $outgoing_count = $dashboard->getSignatoryOutgoingCount($user_id);
 $approved_count = $dashboard->getSignatoryCountByStatus($user_id, 'APPROVED');
 $rejected_count = $dashboard->getSignatoryCountByStatus($user_id, 'REJECTED');
-$closed_count   = $dashboard->getSignatoryCountByStatus($user_id, 'CLOSED');
+$closed_count = $dashboard->getSignatoryCountByStatus($user_id, 'CLOSED');
 
 // Graph Data (Monthly Volume)
 $monthly_counts = $dashboard->getMonthlyVolume($user_id);
@@ -99,15 +99,12 @@ $extra_css = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner" style="overflow-x: hidden; width: 100%;">
-
+?> <div class="dashboard-inner" style="overflow-x: hidden; width: 100%;">
     <div class="rd-profile-header mb-4">
-        <h2 class="fw-bold text-dark mb-0"><?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
+        <h2 class="fw-bold text-dark mb-0">
+            <?= htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']) ?></h2>
         <p class="text-secondary fs-5 mt-1"><?= $formal_title ?> IX</p>
     </div>
-
     <div class="cards-grid mb-5">
         <div class="custom-card card-incoming">
             <div class="card-number"><?= number_format($incoming_count) ?></div>
@@ -130,7 +127,6 @@ require_once BASE_PATH . 'includes/header.php';
             <div class="card-info"><i class="fa-solid fa-folder-closed me-2"></i> Closed</div>
         </div>
     </div>
-
     <div class="row mb-5">
         <div class="col-lg-5 mb-4">
             <div class="graph-card h-100">
@@ -145,11 +141,9 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
     </div>
-
     <div class="recent-documents-section">
         <h4 class="fw-bold mb-4">Pending for Approval:</h4>
         <div class="row">
-
             <div class="col-lg-6 mb-4">
                 <h5 class="fw-bold mb-3"><i class="fa-solid fa-file-import text-primary me-2"></i> Incoming </h5>
                 <div class="table-container p-0 shadow-sm overflow-hidden">
@@ -163,30 +157,41 @@ require_once BASE_PATH . 'includes/header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach($recent_incoming as $doc): ?>
-                                <tr class="clickable-row" onclick="location.href='signView.php?id=<?= $doc['id'] ?>&from=signDashboard.php'">
-                                    <td class="fw-bold text-primary text-truncate" title="<?= htmlspecialchars($doc['dts_no']) ?>"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                                    <td class="text-truncate" title="<?= htmlspecialchars($doc['subject']) ?>"><?= htmlspecialchars($doc['subject']) ?></td>
-                                    <td class="overflow-hidden">
-                                        <div class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
-                                            <div class="creator-avatar" style="width: 24px; height: 24px;"><i class="fa-solid fa-user" style="font-size:0.6rem;"></i></div>
-                                            <div class="creator-info overflow-hidden ms-2">
-                                                <span class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_fname']) ?></span>
-                                                <span class="creator-role smaller d-block text-muted text-truncate">Records Officer</span>
+                                <?php foreach ($recent_incoming as $doc): ?>
+                                    <tr class="clickable-row"
+                                        onclick="location.href='signView.php?id=<?= $doc['id'] ?>&from=signDashboard.php'">
+                                        <td class="fw-bold text-primary text-truncate"
+                                            title="<?= htmlspecialchars($doc['dts_no']) ?>">
+                                            <?= htmlspecialchars($doc['dts_no']) ?></td>
+                                        <td class="text-truncate" title="<?= htmlspecialchars($doc['subject']) ?>">
+                                            <?= htmlspecialchars($doc['subject']) ?></td>
+                                        <td class="overflow-hidden">
+                                            <div
+                                                class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
+                                                <div class="creator-avatar" style="width: 24px; height: 24px;"><i
+                                                        class="fa-solid fa-user" style="font-size:0.6rem;"></i></div>
+                                                <div class="creator-info overflow-hidden ms-2">
+                                                    <span
+                                                        class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_fname']) ?></span>
+                                                    <span
+                                                        class="creator-role smaller d-block text-muted text-truncate">Records
+                                                        Officer</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
-                                <?php if(empty($recent_incoming)): ?>
-                                    <tr><td colspan="3" class="text-center text-muted py-4">No pending incoming documents for today.</td></tr>
+                                <?php if (empty($recent_incoming)): ?>
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">No pending incoming documents
+                                            for today.</td>
+                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-
             <div class="col-lg-6 mb-4">
                 <h5 class="fw-bold mb-3"><i class="fa-solid fa-file-export text-warning me-2"></i> Outgoing </h5>
                 <div class="table-container p-0 shadow-sm overflow-hidden">
@@ -200,34 +205,43 @@ require_once BASE_PATH . 'includes/header.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach($recent_outgoing as $doc): ?>
-                                <tr class="clickable-row" onclick="location.href='signView.php?id=<?= $doc['id'] ?>&from=signDashboard.php'">
-                                    <td class="fw-bold text-primary text-truncate" title="<?= htmlspecialchars($doc['dts_no']) ?>"><?= htmlspecialchars($doc['dts_no']) ?></td>
-                                    <td class="text-truncate" title="<?= htmlspecialchars($doc['subject']) ?>"><?= htmlspecialchars($doc['subject']) ?></td>
-                                    <td class="overflow-hidden">
-                                        <div class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
-                                            <div class="creator-avatar" style="width: 24px; height: 24px;"><i class="fa-solid fa-user" style="font-size:0.6rem;"></i></div>
-                                            <div class="creator-info overflow-hidden ms-2">
-                                                <span class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_fname']) ?></span>
-                                                <span class="creator-role smaller d-block text-muted text-truncate"><?= htmlspecialchars($doc['c_division']) ?></span>
+                                <?php foreach ($recent_outgoing as $doc): ?>
+                                    <tr class="clickable-row"
+                                        onclick="location.href='signView.php?id=<?= $doc['id'] ?>&from=signDashboard.php'">
+                                        <td class="fw-bold text-primary text-truncate"
+                                            title="<?= htmlspecialchars($doc['dts_no']) ?>">
+                                            <?= htmlspecialchars($doc['dts_no']) ?></td>
+                                        <td class="text-truncate" title="<?= htmlspecialchars($doc['subject']) ?>">
+                                            <?= htmlspecialchars($doc['subject']) ?></td>
+                                        <td class="overflow-hidden">
+                                            <div
+                                                class="creator-cell m-0 p-0 d-flex align-items-center bg-transparent border-0">
+                                                <div class="creator-avatar" style="width: 24px; height: 24px;"><i
+                                                        class="fa-solid fa-user" style="font-size:0.6rem;"></i></div>
+                                                <div class="creator-info overflow-hidden ms-2">
+                                                    <span
+                                                        class="creator-name small d-block text-truncate"><?= htmlspecialchars($doc['c_fname']) ?></span>
+                                                    <span
+                                                        class="creator-role smaller d-block text-muted text-truncate"><?= htmlspecialchars($doc['c_division']) ?></span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
-                                <?php if(empty($recent_outgoing)): ?>
-                                    <tr><td colspan="3" class="text-center text-muted py-4">No pending outgoing documents for today.</td></tr>
+                                <?php if (empty($recent_outgoing)): ?>
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-4">No pending outgoing documents
+                                            for today.</td>
+                                    </tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Status Distribution Pie Chart (Updated for 5 metrics)
@@ -264,31 +278,32 @@ require_once BASE_PATH . 'includes/header.php';
         }
     });
 </script>
-
 <?php if ($must_change == 1): ?>
-<div class="modal fade" id="forceUpdateModal" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content custom-modal border-danger">
-            <div class="modal-body p-4 text-center">
-                <i class="fa-solid fa-shield-halved text-danger mb-3 display-4"></i>
-                <h5 class="fw-bold">Security Action Required</h5>
-                <p class="small text-muted mb-4">Please update your credentials before proceeding.</p>
-                <form method="POST" action="../../controllers/user.php">
-                    <input type="hidden" name="action" value="force_update_credentials">
-                    <input type="text" name="new_username" class="form-control mb-3" value="<?= htmlspecialchars($user_info['username']) ?>" required>
-                    <input type="password" name="new_password" class="form-control mb-3" placeholder="New Password" required>
-                    <input type="password" name="confirm_password" class="form-control mb-4" placeholder="Confirm Password" required>
-                    <button type="submit" class="btn btn-danger w-100">Update & Secure Account</button>
-                </form>
+    <div class="modal fade" id="forceUpdateModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content custom-modal border-danger">
+                <div class="modal-body p-4 text-center">
+                    <i class="fa-solid fa-shield-halved text-danger mb-3 display-4"></i>
+                    <h5 class="fw-bold">Security Action Required</h5>
+                    <p class="small text-muted mb-4">Please update your credentials before proceeding.</p>
+                    <form method="POST" action="../../controllers/user.php">
+                        <input type="hidden" name="action" value="force_update_credentials">
+                        <input type="text" name="new_username" class="form-control mb-3"
+                            value="<?= htmlspecialchars($user_info['username']) ?>" required>
+                        <input type="password" name="new_password" class="form-control mb-3" placeholder="New Password"
+                            required>
+                        <input type="password" name="confirm_password" class="form-control mb-4"
+                            placeholder="Confirm Password" required>
+                        <button type="submit" class="btn btn-danger w-100">Update & Secure Account</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        new bootstrap.Modal(document.getElementById('forceUpdateModal')).show();
-    });
-</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new bootstrap.Modal(document.getElementById('forceUpdateModal')).show();
+        });
+    </script>
 <?php endif; ?>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

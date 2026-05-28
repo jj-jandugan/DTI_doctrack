@@ -1,16 +1,17 @@
 <?php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Admin') {
-    header("Location: " . BASE_URL . "login.php"); exit;
+    header("Location: " . BASE_URL . "login.php");
+    exit;
 }
 
 $page_title = "Global Document Records";
 $docManager = new DocumentManager($pdo);
 
 // 1. DATA FOR TABLE (PAGINATED)
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int) $_GET['page'] : 1;
 $limit = 15;
 $offset = ($page - 1) * $limit;
 
@@ -29,18 +30,18 @@ foreach ($all_records_for_export as $doc) {
 
     // MAPPING DATA TO YOUR SPECIFIC EXCEL HEADERS
     $export_payload[] = [
-        'Control No.'      => $doc['dts_no'],
-        'Remarks'          => $doc['classification'] ?? 'N/A',
-        'Form'             => $doc['doc_type'] ?? 'N/A',
-        'Date&Time Created'=> date('M d, Y h:i A', strtotime($doc['created_at'])),
-        'Origin'           => $doc['origin_name'] ?? ($doc['c_division'] ?? 'Internal'),
-        'Subject'          => $clean_subject,
-        'Instruction'      => $clean_instruction,
-        'Authority'        => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
-        'Destination'      => $doc['address_name'] ?? 'Internal Routing',
-        'Processor'        => ($doc['c_fname'] ?? 'System') . ' ' . ($doc['c_lname'] ?? '') . ' (' . ($doc['c_division'] ?? 'RO') . ')',
-        'Action Taken'     => 'Forwarded', // Hardcoded as per request
-        'Status'           => $doc['status_name'],
+        'Control No.' => $doc['dts_no'],
+        'Remarks' => $doc['classification'] ?? 'N/A',
+        'Form' => $doc['doc_type'] ?? 'N/A',
+        'Date&Time Created' => date('M d, Y h:i A', strtotime($doc['created_at'])),
+        'Origin' => $doc['origin_name'] ?? ($doc['c_division'] ?? 'Internal'),
+        'Subject' => $clean_subject,
+        'Instruction' => $clean_instruction,
+        'Authority' => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
+        'Destination' => $doc['address_name'] ?? 'Internal Routing',
+        'Processor' => ($doc['c_fname'] ?? 'System') . ' ' . ($doc['c_lname'] ?? '') . ' (' . ($doc['c_division'] ?? 'RO') . ')',
+        'Action Taken' => 'Forwarded', // Hardcoded as per request
+        'Status' => $doc['status_name'],
         'Date&Time Closed' => date('M d, Y h:i A', strtotime($doc['updated_at']))
     ];
 }
@@ -100,47 +101,56 @@ $extra_js = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-4">
+?> <div class="dashboard-inner p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-database me-2 text-primary"></i> System Document Records</h4>
+            <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-database me-2 text-primary"></i> System Document
+                Records</h4>
             <p class="text-muted small mb-0">Centralized logs for all Closed and Cancelled documents.</p>
         </div>
-
-        <button type="button" class="btn fw-bold shadow-sm d-flex align-items-center"
-                onclick="exportToExcel()"
-                style="background-color: #10b981; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px;">
-            <i class="fa-solid fa-file-excel me-2" style="font-size: 1.1rem;"></i> Export to Excel
-        </button>
+        <button type="button" class="btn fw-bold shadow-sm d-flex align-items-center" onclick="exportToExcel()"
+            style="background-color: #10b981; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px;">
+            <i class="fa-solid fa-file-excel me-2" style="font-size: 1.1rem;"></i> Export to Excel </button>
     </div>
-
     <!-- Filters -->
     <div class="filter-section mb-4 bg-white p-3 rounded-4 border shadow-sm">
         <div class="row g-2">
             <div class="col-md-3">
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search DTS, Subject, or Processor...">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i
+                            class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0"
+                        placeholder="Search DTS, Subject, or Processor...">
                 </div>
             </div>
             <div class="col-md-2">
-                <select id="statusFilter" class="form-select"><option value="">All Statuses</option><option value="CLOSED">Closed</option><option value="CANCELLED">Cancelled</option></select>
+                <select id="statusFilter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
             </div>
             <div class="col-md-2">
-                <select id="directionFilter" class="form-select"><option value="">All Routes</option><option value="Incoming">Incoming</option><option value="Outgoing">Outgoing</option></select>
+                <select id="directionFilter" class="form-select">
+                    <option value="">All Routes</option>
+                    <option value="Incoming">Incoming</option>
+                    <option value="Outgoing">Outgoing</option>
+                </select>
             </div>
             <div class="col-md-2">
                 <select id="typeFilter" class="form-select">
                     <option value="">All Types</option>
-                    <?php foreach($doc_types as $t): ?><option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option><?php endforeach; ?>
+                    <?php foreach ($doc_types as $t): ?>
+                        <option value="<?= htmlspecialchars($t['name']) ?>"><?= htmlspecialchars($t['name']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3"><div class="input-group"><input type="date" id="startDate" class="form-control"><input type="date" id="endDate" class="form-control"></div></div>
+            <div class="col-md-3">
+                <div class="input-group"><input type="date" id="startDate" class="form-control"><input type="date"
+                        id="endDate" class="form-control"></div>
+            </div>
         </div>
     </div>
-
     <div class="table-container p-0 border-0">
         <div class="table-responsive">
             <table class="data-table">
@@ -162,28 +172,42 @@ require_once BASE_PATH . 'includes/header.php';
                 </thead>
                 <tbody>
                     <?php if (empty($records)): ?>
-                        <tr><td colspan="12" class="text-center py-5">No records found.</td></tr>
+                        <tr>
+                            <td colspan="12" class="text-center py-5">No records found.</td>
+                        </tr>
                     <?php else: ?>
                         <?php foreach ($records as $row): ?>
-                        <tr class="history-row">
-                            <td class="fw-bold text-primary search-target"><?= $row['dts_no'] ?></td>
-                            <td><span class="status <?= strtolower($row['status_category']) ?> status-target"><?= $row['status_name'] ?></span></td>
-                            <td class="small"><div><?= date('M d, Y', strtotime($row['created_at'])) ?></div><div class="text-muted"><?= date('h:i A', strtotime($row['created_at'])) ?></div></td>
-                            <td class="small"><div><?= date('M d, Y', strtotime($row['updated_at'])) ?></div><div class="text-muted"><?= date('h:i A', strtotime($row['updated_at'])) ?></div></td>
-                            <td class="class-target"><?= $row['classification'] ?></td>
-                            <td class="type-target"><?= $row['doc_type'] ?></td>
-                            <td class="small"><?= htmlspecialchars($row['origin_name'] ?? $row['c_division']) ?></td>
-                            <td class="text-wrap-multi search-target fw-bold text-dark"><?= htmlspecialchars($row['subject']) ?></td>
-                            <td class="text-wrap-multi small text-muted"><?= htmlspecialchars($row['particulars'] ?: '---') ?></td>
-                            <td class="small"><?= htmlspecialchars($row['sig_fname'] . ' ' . $row['sig_lname']) ?></td>
-                            <td class="small"><?= htmlspecialchars($row['address_name']) ?></td>
-                            <td class="search-target">
-                                <span class="small d-block fw-bold"><?= htmlspecialchars($row['c_fname'] . ' ' . $row['c_lname']) ?></span>
-                                <span class="smaller text-muted d-block"><?= htmlspecialchars($row['c_division'] ?? 'Records') ?></span>
-                            </td>
-                            <td class="d-none direction-target"><?= $row['doc_direction'] ?></td>
-                            <td class="d-none date-target"><?= date('Y-m-d', strtotime($row['updated_at'])) ?></td>
-                        </tr>
+                            <tr class="history-row">
+                                <td class="fw-bold text-primary search-target"><?= $row['dts_no'] ?></td>
+                                <td><span
+                                        class="status <?= strtolower($row['status_category']) ?> status-target"><?= $row['status_name'] ?></span>
+                                </td>
+                                <td class="small">
+                                    <div><?= date('M d, Y', strtotime($row['created_at'])) ?></div>
+                                    <div class="text-muted"><?= date('h:i A', strtotime($row['created_at'])) ?></div>
+                                </td>
+                                <td class="small">
+                                    <div><?= date('M d, Y', strtotime($row['updated_at'])) ?></div>
+                                    <div class="text-muted"><?= date('h:i A', strtotime($row['updated_at'])) ?></div>
+                                </td>
+                                <td class="class-target"><?= $row['classification'] ?></td>
+                                <td class="type-target"><?= $row['doc_type'] ?></td>
+                                <td class="small"><?= htmlspecialchars($row['origin_name'] ?? $row['c_division']) ?></td>
+                                <td class="text-wrap-multi search-target fw-bold text-dark">
+                                    <?= htmlspecialchars($row['subject']) ?></td>
+                                <td class="text-wrap-multi small text-muted">
+                                    <?= htmlspecialchars($row['particulars'] ?: '---') ?></td>
+                                <td class="small"><?= htmlspecialchars($row['sig_fname'] . ' ' . $row['sig_lname']) ?></td>
+                                <td class="small"><?= htmlspecialchars($row['address_name']) ?></td>
+                                <td class="search-target">
+                                    <span
+                                        class="small d-block fw-bold"><?= htmlspecialchars($row['c_fname'] . ' ' . $row['c_lname']) ?></span>
+                                    <span
+                                        class="smaller text-muted d-block"><?= htmlspecialchars($row['c_division'] ?? 'Records') ?></span>
+                                </td>
+                                <td class="d-none direction-target"><?= $row['doc_direction'] ?></td>
+                                <td class="d-none date-target"><?= date('Y-m-d', strtotime($row['updated_at'])) ?></td>
+                            </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
@@ -192,7 +216,6 @@ require_once BASE_PATH . 'includes/header.php';
         <?php include BASE_PATH . 'includes/page.php'; ?>
     </div>
 </div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof TableFilter !== 'undefined') {
@@ -200,5 +223,4 @@ require_once BASE_PATH . 'includes/header.php';
         }
     });
 </script>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

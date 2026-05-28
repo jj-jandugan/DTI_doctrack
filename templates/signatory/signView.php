@@ -1,7 +1,7 @@
 <?php
 // templates/signatory/signView.php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 // Security Check: Only 'RD' or 'ARD' role can access
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Signatory') {
@@ -78,13 +78,15 @@ if (in_array($doc['route_type'], ['outside_dti', 'within_dti'])) {
     $stmtExt = $pdo->prepare("SELECT contact_person FROM records_externalrecipient WHERE document_id = ?");
     $stmtExt->execute([$doc_id]);
     $ext_contacts = $stmtExt->fetchAll(PDO::FETCH_COLUMN);
-    $valid_contacts = array_filter($ext_contacts, function($c) { return trim($c) !== ''; });
+    $valid_contacts = array_filter($ext_contacts, function ($c) {
+        return trim($c) !== ''; });
     if (!empty($valid_contacts)) {
         $dest_names_html = implode(', ', array_map('htmlspecialchars', $valid_contacts));
     }
 } else {
     if (!empty($recipients)) {
-        $clean_names = array_map(function($person) { return explode(' (', $person)[0]; }, $recipients);
+        $clean_names = array_map(function ($person) {
+            return explode(' (', $person)[0]; }, $recipients);
         $dest_names_html = implode(', ', array_map('htmlspecialchars', array_unique($clean_names)));
     }
 }
@@ -97,10 +99,15 @@ $combined_status = $cat . '|' . $nam;
 $level = 1;
 $is_rejected = (strpos($combined_status, 'REJECT') !== false || strpos($combined_status, 'CANCEL') !== false);
 
-if (strpos($combined_status, 'CLOSE') !== false || strpos($combined_status, 'DISPATCHED') !== false) { $level = 5; }
-elseif (strpos($combined_status, 'FOR DISPATCH') !== false || strpos($combined_status, 'FOR-DISPATCH') !== false) { $level = 4; }
-elseif (strpos($combined_status, 'APPROV') !== false && strpos($combined_status, 'FOR') === false) { $level = 3; }
-elseif (strpos($combined_status, 'APPROVAL') !== false || strpos($combined_status, 'ONGOING') !== false) { $level = 2; }
+if (strpos($combined_status, 'CLOSE') !== false || strpos($combined_status, 'DISPATCHED') !== false) {
+    $level = 5;
+} elseif (strpos($combined_status, 'FOR DISPATCH') !== false || strpos($combined_status, 'FOR-DISPATCH') !== false) {
+    $level = 4;
+} elseif (strpos($combined_status, 'APPROV') !== false && strpos($combined_status, 'FOR') === false) {
+    $level = 3;
+} elseif (strpos($combined_status, 'APPROVAL') !== false || strpos($combined_status, 'ONGOING') !== false) {
+    $level = 2;
+}
 
 $step1 = 'completed';
 $step2 = ($level > 2) ? 'completed' : (($level == 2) ? 'active' : '');
@@ -108,10 +115,14 @@ $step3 = ($level > 3) ? 'completed' : (($level == 3) ? 'active' : '');
 $step4 = ($level > 4) ? 'completed' : (($level == 4) ? 'active' : '');
 $step5 = ($level == 5) ? 'completed' : '';
 if ($is_rejected) {
-    if ($level <= 2) $step2 = 'danger';
-    elseif ($level == 3) $step3 = 'danger';
-    elseif ($level == 4) $step4 = 'danger';
-    elseif ($level == 5) $step5 = 'danger';
+    if ($level <= 2)
+        $step2 = 'danger';
+    elseif ($level == 3)
+        $step3 = 'danger';
+    elseif ($level == 4)
+        $step4 = 'danger';
+    elseif ($level == 5)
+        $step5 = 'danger';
 }
 $progress_width = ($level == 2) ? 25 : (($level == 3) ? 50 : (($level == 4) ? 75 : (($level == 5) ? 100 : 0)));
 
@@ -209,71 +220,115 @@ $extra_js = '
 ';
 
 require_once BASE_PATH . 'includes/header.php';
-?>
-
-<div class="dashboard-inner p-3">
+?> <div class="dashboard-inner p-3">
     <div class="mb-3">
         <a href="<?= htmlspecialchars($return_page) ?>" class="text-decoration-none text-secondary small fw-bold">
-            <i class="fa-solid fa-chevron-left me-1"></i> Back to List
-        </a>
+            <i class="fa-solid fa-chevron-left me-1"></i> Back to List </a>
     </div>
-
     <?php if ($success_msg): ?>
-        <div class="alert alert-success alert-dismissible fade show"><i class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-success alert-dismissible fade show"><i
+                class="fa-solid fa-circle-check me-2"></i><?= htmlspecialchars($success_msg) ?><button type="button"
+                class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
-
     <?php if ($error_msg): ?>
-        <div class="alert alert-danger alert-dismissible fade show"><i class="fa-solid fa-triangle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <div class="alert alert-danger alert-dismissible fade show"><i
+                class="fa-solid fa-triangle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?><button type="button"
+                class="btn-close" data-bs-dismiss="alert"></button></div>
     <?php endif; ?>
-
     <div class="detail-card border rounded shadow-sm bg-white p-4">
-
         <div class="detail-header d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-            <h5 class="fw-bold mb-0">DTS No. <span class="text-primary"><?= htmlspecialchars($doc['dts_no']) ?></span></h5>
+            <h5 class="fw-bold mb-0">DTS No. <span class="text-primary"><?= htmlspecialchars($doc['dts_no']) ?></span>
+            </h5>
             <span class="status <?= strtolower(str_replace(' ', '-', $doc['status_category'])) ?>">
                 <?= htmlspecialchars($doc['status_name']) ?>
             </span>
         </div>
-
         <!-- STATUS TRACKER -->
         <div class="bg-light border rounded p-4 mb-4 shadow-sm">
-            <h6 class="fw-bold text-dark mb-4 text-center text-uppercase" style="letter-spacing: 1px;"><i class="fa-solid fa-route text-secondary me-2"></i> Document Status</h6>
+            <h6 class="fw-bold text-dark mb-4 text-center text-uppercase" style="letter-spacing: 1px;"><i
+                    class="fa-solid fa-route text-secondary me-2"></i> Document Status</h6>
             <div class="position-relative mt-4 mb-2">
-                <div style="position: absolute; top: 15px; left: 10%; right: 10%; height: 4px; background: #e2e8f0; z-index: 1;"></div>
-                <div style="position: absolute; top: 15px; left: 10%; width: calc(80% * <?= $progress_width ?> / 100); height: 4px; background: <?= $is_rejected ? '#dc3545' : '#10b981' ?>; z-index: 2; transition: width 0.5s ease;"></div>
-                <div class="visual-stepper d-flex justify-content-between position-relative" style="z-index: 3; padding: 0;">
-                    <div class="step <?= $step1 ?>"><div class="circle"><i class="fa-solid fa-file-import"></i></div><div class="label">Encoded</div></div>
-                    <div class="step <?= $step2 ?>"><div class="circle"><i class="fa-solid fa-file-signature"></i></div><div class="label">For Approval</div></div>
-                    <div class="step <?= $step3 ?>"><div class="circle"><i class="fa-solid fa-stamp"></i></div><div class="label">Approved</div></div>
-                    <div class="step <?= $step4 ?>"><div class="circle"><?= $icon_step4 ?></div><div class="label"><?= $label_step4 ?></div></div>
-                    <div class="step <?= $step5 ?>"><div class="circle"><?php if($is_rejected): ?><i class="fa-solid fa-xmark"></i><?php else: ?><?= $icon_step5_success ?><?php endif; ?></div><div class="label"><?= ($is_rejected) ? 'Cancelled/Rejected' : $label_step5 ?></div></div>
+                <div
+                    style="position: absolute; top: 15px; left: 10%; right: 10%; height: 4px; background: #e2e8f0; z-index: 1;">
+                </div>
+                <div
+                    style="position: absolute; top: 15px; left: 10%; width: calc(80% * <?= $progress_width ?> / 100); height: 4px; background: <?= $is_rejected ? '#dc3545' : '#10b981' ?>; z-index: 2; transition: width 0.5s ease;">
+                </div>
+                <div class="visual-stepper d-flex justify-content-between position-relative"
+                    style="z-index: 3; padding: 0;">
+                    <div class="step <?= $step1 ?>">
+                        <div class="circle"><i class="fa-solid fa-file-import"></i></div>
+                        <div class="label">Encoded</div>
+                    </div>
+                    <div class="step <?= $step2 ?>">
+                        <div class="circle"><i class="fa-solid fa-file-signature"></i></div>
+                        <div class="label">For Approval</div>
+                    </div>
+                    <div class="step <?= $step3 ?>">
+                        <div class="circle"><i class="fa-solid fa-stamp"></i></div>
+                        <div class="label">Approved</div>
+                    </div>
+                    <div class="step <?= $step4 ?>">
+                        <div class="circle"><?= $icon_step4 ?></div>
+                        <div class="label"><?= $label_step4 ?></div>
+                    </div>
+                    <div class="step <?= $step5 ?>">
+                        <div class="circle"><?php if ($is_rejected): ?><i
+                                    class="fa-solid fa-xmark"></i><?php else: ?><?= $icon_step5_success ?><?php endif; ?>
+                        </div>
+                        <div class="label"><?= ($is_rejected) ? 'Cancelled/Rejected' : $label_step5 ?></div>
+                    </div>
                 </div>
             </div>
         </div>
-
         <div class="row g-4">
             <!-- LEFT: DETAILS -->
             <div class="col-lg-8">
-                <h6 class="border-bottom pb-2 mb-3 text-secondary" style="font-size: 0.9rem;"><i class="fa-solid fa-circle-info me-2"></i>Document Details</h6>
-
+                <h6 class="border-bottom pb-2 mb-3 text-secondary" style="font-size: 0.9rem;"><i
+                        class="fa-solid fa-circle-info me-2"></i>Document Details</h6>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Classification</label><p class="data-value text-primary"><?= htmlspecialchars($doc['class_name'] ?? 'N/A') ?></p></div></div>
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Document Type</label><p class="data-value"><?= htmlspecialchars($doc['type_name'] ?? 'N/A') ?></p></div></div>
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Due Date</label><p class="data-value text-danger"><?= !empty($doc['due_date']) ? date('M d, Y', strtotime($doc['due_date'])) : 'None' ?></p></div></div>
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Signatory</label><p class="data-value"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? ''))) ?: 'N/A' ?></p></div></div>
+                    <div class="col-md-6">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Classification</label>
+                            <p class="data-value text-primary"><?= htmlspecialchars($doc['class_name'] ?? 'N/A') ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Document Type</label>
+                            <p class="data-value"><?= htmlspecialchars($doc['type_name'] ?? 'N/A') ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Due Date</label>
+                            <p class="data-value text-danger">
+                                <?= !empty($doc['due_date']) ? date('M d, Y', strtotime($doc['due_date'])) : 'None' ?>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Signatory</label>
+                            <p class="data-value">
+                                <?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? ''))) ?: 'N/A' ?>
+                            </p>
+                        </div>
+                    </div>
                 </div>
-
                 <div class="row mb-3">
-                    <div class="col-12"><div class="data-group"><label class="text-muted small text-uppercase">Subject</label><div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($doc['subject']) ?></div></div></div>
+                    <div class="col-12">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Subject</label>
+                            <div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($doc['subject']) ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
                 <!-- ADDRESS -->
-                <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i class="fa-solid fa-location-dot me-2"></i>Address</h6>
+                <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i
+                        class="fa-solid fa-location-dot me-2"></i>Address</h6>
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <div class="data-group">
                             <label class="text-muted small text-uppercase">Division / Group / Office</label>
-                            <div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($display_offices) ?></div>
+                            <div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($display_offices) ?>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -283,21 +338,38 @@ require_once BASE_PATH . 'includes/header.php';
                         </div>
                     </div>
                 </div>
-
                 <!-- SENDER/ORIGIN INFORMATION -->
                 <?php if (!empty($doc['origin_name']) && strtolower($doc['origin_name']) !== 'internal dti'): ?>
-                <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Origin Information</h6>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Origin Office / Agency</label><div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($doc['origin_name']) ?></div></div></div>
-                    <div class="col-md-6"><div class="data-group"><label class="text-muted small text-uppercase">Sender / Contact Person</label><div class="data-value textarea-style py-2 px-3"><?= htmlspecialchars($doc['sender'] ?? 'N/A') ?></div></div></div>
-                </div>
+                    <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i
+                            class="fa-solid fa-arrow-right-to-bracket me-2"></i>Origin Information</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="data-group"><label class="text-muted small text-uppercase">Origin Office /
+                                    Agency</label>
+                                <div class="data-value textarea-style py-2 px-3">
+                                    <?= htmlspecialchars($doc['origin_name']) ?></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="data-group"><label class="text-muted small text-uppercase">Sender / Contact
+                                    Person</label>
+                                <div class="data-value textarea-style py-2 px-3">
+                                    <?= htmlspecialchars($doc['sender'] ?? 'N/A') ?></div>
+                            </div>
+                        </div>
+                    </div>
                 <?php endif; ?>
-
-                <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i class="fa-solid fa-circle-info me-2"></i>Additional Details</h6>
+                <h6 class="border-bottom pb-2 mb-2 text-secondary mt-4" style="font-size: 0.9rem;"><i
+                        class="fa-solid fa-circle-info me-2"></i>Additional Details</h6>
                 <div class="row g-3 mb-3">
-                    <div class="col-12"><div class="data-group"><label class="text-muted small text-uppercase">Particulars / Remarks</label><div class="data-value textarea-style py-2 px-3"><?= nl2br(htmlspecialchars($doc['particulars'] ?? 'No particulars provided.')) ?></div></div></div>
+                    <div class="col-12">
+                        <div class="data-group"><label class="text-muted small text-uppercase">Particulars /
+                                Remarks</label>
+                            <div class="data-value textarea-style py-2 px-3">
+                                <?= nl2br(htmlspecialchars($doc['particulars'] ?? 'No particulars provided.')) ?></div>
+                        </div>
+                    </div>
                 </div>
-
                 <div class="section-divider">Attachments</div>
                 <?php if (empty($attachments)): ?>
                     <p class="text-muted small ms-2">No files attached.</p>
@@ -307,70 +379,87 @@ require_once BASE_PATH . 'includes/header.php';
                             // FIXED CONSTANT NAME BELOW
                             $ext = strtolower(pathinfo($att['file_path'], PATHINFO_EXTENSION));
                             $icon = ($ext === 'pdf') ? 'fa-file-pdf text-danger' : 'fa-file-word text-primary';
-                        ?>
+                            ?>
                             <div class="info-box d-flex align-items-center">
                                 <i class="fa-solid <?= $icon ?> fs-4 me-3"></i>
                                 <div class="flex-grow-1">
                                     <div class="info-value small"><?= basename($att['file_path']) ?></div>
                                     <div class="text-muted" style="font-size: 0.7rem;">Click to view attachment</div>
                                 </div>
-                                <a href="<?= BASE_URL . $att['file_path'] ?>" target="_blank" class="text-muted"><i class="fa-solid fa-up-right-from-square"></i></a>
+                                <a href="<?= BASE_URL . $att['file_path'] ?>" target="_blank" class="text-muted"><i
+                                        class="fa-solid fa-up-right-from-square"></i></a>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
             </div>
-
             <!-- RIGHT: ACTIVITY LOG -->
             <div class="col-lg-4">
-                <h6 class="border-bottom pb-2 mb-3 text-secondary" style="font-size: 0.9rem;"><i class="fa-solid fa-clock-rotate-left me-2"></i>Activity Log</h6>
+                <h6 class="border-bottom pb-2 mb-3 text-secondary" style="font-size: 0.9rem;"><i
+                        class="fa-solid fa-clock-rotate-left me-2"></i>Activity Log</h6>
                 <div class="timeline-container">
-                    <?php if(empty($history_logs)): ?><p class="text-muted small fst-italic">No history records found.</p><?php else: ?>
+                    <?php if (empty($history_logs)): ?>
+                        <p class="text-muted small fst-italic">No history records found.</p><?php else: ?>
                         <?php foreach ($history_logs as $index => $log):
-                            $icon = 'fa-arrow-right'; $bg = '#1d4ed8';
-                            if(strtoupper($log['action_taken']) === 'ENCODED') { $icon = 'fa-plus'; $bg = '#10b981'; }
-                            elseif(strtoupper($log['action_taken']) === 'REJECTED') { $icon = 'fa-xmark'; $bg = '#dc3545'; }
-                            elseif(strtoupper($log['action_taken']) === 'APPROVED') { $icon = 'fa-check'; $bg = '#10b981'; }
+                            $icon = 'fa-arrow-right';
+                            $bg = '#1d4ed8';
+                            if (strtoupper($log['action_taken']) === 'ENCODED') {
+                                $icon = 'fa-plus';
+                                $bg = '#10b981';
+                            } elseif (strtoupper($log['action_taken']) === 'REJECTED') {
+                                $icon = 'fa-xmark';
+                                $bg = '#dc3545';
+                            } elseif (strtoupper($log['action_taken']) === 'APPROVED') {
+                                $icon = 'fa-check';
+                                $bg = '#10b981';
+                            }
                             $hidden_class = ($index >= 4) ? 'd-none extra-log' : '';
-                        ?>
-                        <div class="timeline-item <?= $hidden_class ?>">
-                            <div class="timeline-icon" style="background-color: <?= $bg ?>;"><i class="fa-solid <?= $icon ?> small"></i></div>
-                            <div class="timeline-content bg-white border p-2 rounded shadow-sm mb-3">
-                                <div class="fw-bold text-dark" style="font-size: 0.8rem;"><?= htmlspecialchars(strtoupper($log['action_taken'])) ?></div>
-                                <div class="text-muted" style="font-size: 0.65rem;"><?= date('M d, Y h:i A', strtotime($log['timestamp'])) ?></div>
-                                <p class="mb-1 text-secondary small"><?= htmlspecialchars($log['remarks']) ?></p>
-                                <div style="font-size: 0.75rem;">
-                                        <div class="fw-bold text-dark"><?= htmlspecialchars($log['first_name'] . ' ' . $log['last_name']) ?></div>
+                            ?>
+                            <div class="timeline-item <?= $hidden_class ?>">
+                                <div class="timeline-icon" style="background-color: <?= $bg ?>;"><i
+                                        class="fa-solid <?= $icon ?> small"></i></div>
+                                <div class="timeline-content bg-white border p-2 rounded shadow-sm mb-3">
+                                    <div class="fw-bold text-dark" style="font-size: 0.8rem;">
+                                        <?= htmlspecialchars(strtoupper($log['action_taken'])) ?></div>
+                                    <div class="text-muted" style="font-size: 0.65rem;">
+                                        <?= date('M d, Y h:i A', strtotime($log['timestamp'])) ?></div>
+                                    <p class="mb-1 text-secondary small"><?= htmlspecialchars($log['remarks']) ?></p>
+                                    <div style="font-size: 0.75rem;">
+                                        <div class="fw-bold text-dark">
+                                            <?= htmlspecialchars($log['first_name'] . ' ' . $log['last_name']) ?></div>
                                         <div class="text-muted"><?= htmlspecialchars($log['division_name']) ?></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         <?php endforeach; ?>
-                        <?php if(count($history_logs) > 4): ?><div class="text-center mt-2"><button type="button" id="toggleLogsBtn" class="btn btn-sm btn-link fw-bold text-decoration-none" onclick="toggleActivityLogs()">See More</button></div><?php endif; ?>
+                        <?php if (count($history_logs) > 4): ?>
+                            <div class="text-center mt-2"><button type="button" id="toggleLogsBtn"
+                                    class="btn btn-sm btn-link fw-bold text-decoration-none" onclick="toggleActivityLogs()">See
+                                    More</button></div><?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
-
         <div class="footer-action-container pt-3 border-top mt-4 d-flex justify-content-between align-items-center">
             <div class="created-info">
-                <div class="fw-bold text-dark small">Created By: <span class="text-primary"><?= htmlspecialchars($doc['c_fname'].' '.$doc['c_lname']) ?></span></div>
+                <div class="fw-bold text-dark small">Created By: <span
+                        class="text-primary"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span></div>
                 <div class="text-muted" style="font-size: 0.7rem;">
                     <?= htmlspecialchars($doc['c_division']) ?>
                     <p class="mb-0"><?= date('F d, Y h:i A', strtotime($doc['created_at'])) ?></p>
                 </div>
             </div>
-
             <?php if (in_array(strtoupper($doc['status_name']), ['FOR APPROVAL', 'FOR-APPROVAL']) && $doc['signatory_id'] == $user_id): ?>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-red btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal"><i class="fa-solid fa-xmark-circle me-1"></i> Reject</button>
-                <button type="button" class="btn btn-blue btn-sm" data-bs-toggle="modal" data-bs-target="#approveModal"><i class="fa-solid fa-check-circle me-1"></i> Approve</button>
-            </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-red btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal"><i
+                            class="fa-solid fa-xmark-circle me-1"></i> Reject</button>
+                    <button type="button" class="btn btn-blue btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#approveModal"><i class="fa-solid fa-check-circle me-1"></i> Approve</button>
+                </div>
             <?php endif; ?>
         </div>
     </div>
 </div>
-
 <!-- MODALS -->
 <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -379,23 +468,25 @@ require_once BASE_PATH . 'includes/header.php';
                 <div class="modal-body text-center p-4">
                     <i class="fa-solid fa-check-circle text-primary mb-3" style="font-size: 3rem;"></i>
                     <h5 class="fw-bold text-dark">Approve Document?</h5>
-                    <p class="text-muted" style="font-size: 0.9rem;">Are you sure you want to approve document <b><?= htmlspecialchars($doc['dts_no']) ?></b>?</p>
-
+                    <p class="text-muted" style="font-size: 0.9rem;">Are you sure you want to approve document
+                        <b><?= htmlspecialchars($doc['dts_no']) ?></b>?</p>
                     <div class="p-2 bg-light rounded border mt-3 mb-3 text-start">
-                        <span class="d-block small text-uppercase text-muted fw-bold mb-1" style="font-size: 0.7rem;">Routing Action:</span>
+                        <span class="d-block small text-uppercase text-muted fw-bold mb-1"
+                            style="font-size: 0.7rem;">Routing Action:</span>
                         <?php if (in_array($doc['route_type'], ['division', 'group'])): ?>
-                            <span class="text-dark" style="font-size: 0.8rem;">This document will be directly routed to the division/personnel assigned.</span>
+                            <span class="text-dark" style="font-size: 0.8rem;">This document will be directly routed to the
+                                division/personnel assigned.</span>
                         <?php else: ?>
-                            <span class="text-dark" style="font-size: 0.8rem;">This document will be routed back to the Receiving Officer for external dispatch.</span>
+                            <span class="text-dark" style="font-size: 0.8rem;">This document will be routed back to the
+                                Receiving Officer for external dispatch.</span>
                         <?php endif; ?>
                     </div>
-
                     <input type="hidden" name="action" value="approve_document">
                     <input type="hidden" name="document_id" value="<?= $doc['id'] ?>">
                     <input type="hidden" name="from_page" value="<?= htmlspecialchars($return_page) ?>">
-
                     <div class="d-flex flex-column gap-2 mt-4">
-                        <button type="submit" class="btn btn-blue fw-bold w-100" id="btnApproveSubmit">Yes, Approve</button>
+                        <button type="submit" class="btn btn-blue fw-bold w-100" id="btnApproveSubmit">Yes,
+                            Approve</button>
                         <button type="button" class="btn btn-light w-100 border" data-bs-dismiss="modal">Cancel</button>
                     </div>
                 </div>
@@ -403,7 +494,6 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content custom-modal" style="border: 2px solid #dc3545;">
@@ -411,19 +501,21 @@ require_once BASE_PATH . 'includes/header.php';
                 <div class="modal-body text-center p-4">
                     <i class="fa-solid fa-xmark-circle text-danger mb-3" style="font-size: 3rem;"></i>
                     <h5 class="fw-bold text-dark">Reject Document?</h5>
-                    <p class="text-muted mb-3" style="font-size: 0.9rem;">You are about to reject document <b><?= htmlspecialchars($doc['dts_no']) ?></b>. It will be returned to the creator.</p>
-
+                    <p class="text-muted mb-3" style="font-size: 0.9rem;">You are about to reject document
+                        <b><?= htmlspecialchars($doc['dts_no']) ?></b>. It will be returned to the creator.</p>
                     <div class="data-group m-0 text-start">
-                        <label class="text-muted small text-uppercase" style="font-size: 0.7rem;">Reason for Rejection (Required)</label>
-                        <textarea name="reject_reason" class="form-control shadow-none mt-1" rows="3" placeholder="Provide instructions or reasons..." style="font-size: 0.85rem;" required></textarea>
+                        <label class="text-muted small text-uppercase" style="font-size: 0.7rem;">Reason for Rejection
+                            (Required)</label>
+                        <textarea name="reject_reason" class="form-control shadow-none mt-1" rows="3"
+                            placeholder="Provide instructions or reasons..." style="font-size: 0.85rem;"
+                            required></textarea>
                     </div>
-
                     <input type="hidden" name="action" value="reject_document">
                     <input type="hidden" name="document_id" value="<?= $doc['id'] ?>">
                     <input type="hidden" name="from_page" value="<?= htmlspecialchars($return_page) ?>">
-
                     <div class="d-flex flex-column gap-2 mt-4">
-                        <button type="submit" class="btn btn-danger fw-bold w-100" id="btnRejectSubmit">Yes, Reject</button>
+                        <button type="submit" class="btn btn-danger fw-bold w-100" id="btnRejectSubmit">Yes,
+                            Reject</button>
                         <button type="button" class="btn btn-light w-100 border" data-bs-dismiss="modal">Cancel</button>
                     </div>
                 </div>
@@ -431,5 +523,4 @@ require_once BASE_PATH . 'includes/header.php';
         </div>
     </div>
 </div>
-
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

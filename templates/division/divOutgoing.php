@@ -1,7 +1,7 @@
 <?php
 // templates/division/divOutgoing.php
 require_once '../../classes/database.php';
-require_once '../../classes/DocumentManager.php';
+require_once '../../classes/documentManager.php';
 
 // Security Check: Only 'Division' role can access
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Division') {
