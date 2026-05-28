@@ -52,12 +52,11 @@ $count_overdue  = 0;
 $monthly_counts = $dashboard->getMonthlyVolume($user_id);
 
 $pieData = [
-    $dashboard->getROStatusCount($user_id, 'ONGOING'),
-    $dashboard->getROStatusCount($user_id, 'FOR-APPROVAL'),
-    $dashboard->getROStatusCount($user_id, 'APPROVED'),
-    $dashboard->getROStatusCount($user_id, 'REJECTED'),
-    $dashboard->getROStatusCount($user_id, 'CANCELLED'),
-    $dashboard->getROStatusCount($user_id, 'CLOSED')
+    $dashboard->getROStatusCount($user_id, 'FOR-APPROVAL'), // Labels[0]
+    $dashboard->getROStatusCount($user_id, 'Approved'),     // Labels[1] - (Checking Name 'Approved')
+    $dashboard->getROStatusCount($user_id, 'REJECTED'),     // Labels[2]
+    $dashboard->getROStatusCount($user_id, 'CANCELLED'),    // Labels[3]
+    $dashboard->getROStatusCount($user_id, 'CLOSED')         // Labels[4]
 ];
 
 // Fetch Recent Dispatch Table

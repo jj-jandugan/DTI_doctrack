@@ -3,7 +3,7 @@
 session_start();
 require_once '../classes/database.php';
 
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Signatory') {
     header("Location: ../login.php");
     exit;
 }
@@ -23,23 +23,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($_POST['action'] === 'approve_document') {
 
-            // Fix: Changed 'category' to 'name' to match the new 6-status system
-            $new_status_id = $pdo->query("SELECT id FROM records_status WHERE name = 'APPROVED' LIMIT 1")->fetchColumn();
+            // NEW LOGIC: Fetch status 'Approved' with category 'ONGOING'
+            // This ensures it returns to the RO and is NOT visible to the Division yet.
+            $stmtStatus = $pdo->query("SELECT id FROM records_status WHERE name = 'Approved' AND category = 'ONGOING' LIMIT 1");
+            $new_status_id = $stmtStatus->fetchColumn();
 
-            // Safety check to prevent foreign key errors
+            // Safety check: if the specific pair isn't found, fallback to name-based search
+            if (!$new_status_id) {
+                $new_status_id = $pdo->query("SELECT id FROM records_status WHERE name = 'APPROVED' LIMIT 1")->fetchColumn();
+            }
+
             if (!$new_status_id) {
                 throw new Exception("Database Error: Status 'APPROVED' does not exist in the records_status table.");
             }
 
             $log_action = "APPROVED";
 
-            // Smart Routing Remarks
-            if (in_array($doc_info['route_type'], ['division', 'group'])) {
-                $log_remarks = "Approved by Signatory. Automatically routed to internal destination.";
-            } else {
-                $log_remarks = "Approved by Signatory. Forwarded to Records Officer for external dispatch.";
-            }
-            $_SESSION['success_msg'] = "Document " . $doc_info['dts_no'] . " approved successfully.";
+            // Revised Remarks: Document is returned to RO for signed upload
+            $log_remarks = "Approved by Signatory. Returned to Records Officer for signed document upload.";
+
+            $_SESSION['success_msg'] = "Document " . $doc_info['dts_no'] . " approved and returned to RO for final scan.";
 
         } elseif ($_POST['action'] === 'reject_document') {
 

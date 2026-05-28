@@ -6,13 +6,14 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Load the PHPMailer files we added earlier
+// Load the PHPMailer files
 require_once __DIR__ . '/PHPMailer/Exception.php';
 require_once __DIR__ . '/PHPMailer/PHPMailer.php';
 require_once __DIR__ . '/PHPMailer/SMTP.php';
 
 class Mailer {
     private $mail;
+    public $lastError = ''; // NEW: To capture exact error messages
 
     public function __construct() {
         $this->mail = new PHPMailer(true);
@@ -27,13 +28,23 @@ class Mailer {
             // YOUR 16-DIGIT APP PASSWORD GOES HERE (No spaces)
             $this->mail->Password   = 'apcy owgs okxl rhmy';
 
-            $this->mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $this->mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             $this->mail->Port       = 465;
+
+            // FIX FOR LOCALHOST: Bypass SSL certificate verification
+            $this->mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                )
+            );
 
             // Set the "From" address
             $this->mail->setFrom('dti.dts.system@gmail.com', 'DTI Document Tracking System');
 
         } catch (Exception $e) {
+            $this->lastError = $this->mail->ErrorInfo;
             error_log("Mailer Initialization Error: {$this->mail->ErrorInfo}");
         }
     }
@@ -60,6 +71,8 @@ class Mailer {
             $this->mail->send();
             return true;
         } catch (Exception $e) {
+            // Capture the exact error from PHPMailer
+            $this->lastError = $this->mail->ErrorInfo;
             error_log("Email sending failed to {$toEmail}. Error: {$this->mail->ErrorInfo}");
             return false;
         }

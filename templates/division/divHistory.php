@@ -25,60 +25,60 @@ $offset = ($page - 1) * $limit;
 try {
     $doc_types       = $docManager->getDocumentTypes();
     $classifications = $docManager->getClassifications();
-
-    // 1. FETCH ALL DATA ONCE (JavaScript will handle the pagination pages now!)
     $history_docs    = $docManager->getUserHistory($user_id);
 
-    // 2. STRICT SORTING: Force newest to top based strictly on creation date
     usort($history_docs, function($a, $b) {
         return strtotime($b['created_at']) <=> strtotime($a['created_at']);
     });
 
     $all_recipients  = $docManager->getRecipientsByDocument();
 
-    // 3. BUILD THE JSON PAYLOAD FOR THE EXCEL EXPORT
+    // ==========================================
+    // STEP 3: BUILD THE JSON PAYLOAD FOR EXCEL
+    // ==========================================
     $export_payload = [];
 
-    // Loop through the sorted $history_docs
-    foreach ($history_docs as $doc) {
-        // Safe recipient mapping
-        $receiver_names = 'N/A';
-        if (isset($all_recipients[$doc['id']])) {
-            $clean_names = array_map(function($p) { return explode(' (', $p)[0]; }, $all_recipients[$doc['id']]);
-            $receiver_names = implode(', ', $clean_names);
-        } elseif (!empty($doc['sender'])) {
-            $receiver_names = $doc['sender'];
-        }
+foreach ($history_docs as $doc) {
+    $final_action_time = !empty($doc['updated_at']) ? $doc['updated_at'] : $doc['created_at'];
 
-        // Determine precise Sender & Receiver formats
-        $sender = "---";
-        if (strtolower($doc['doc_direction'] ?? '') === 'incoming') {
-            $sender = trim(($doc['origin_name'] ?? '') . ' - ' . ($doc['sender'] ?? ''), " -");
-        } else {
-            $sender = trim(($doc['c_division'] ?? '') . ' - ' . (($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')), " -");
-        }
-        $receiver = trim(($doc['address_name'] ?? 'Internal Routing') . ' - ' . $receiver_names, " -");
-
-        // Combine text for the Javascript search filter
-        $search_text = strtolower($doc['dts_no'] . ' ' . $doc['subject'] . ' ' . ($doc['address_name'] ?? '') . ' ' . $receiver_names . ' ' . ($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? ''));
-
-        $export_payload[] = [
-            'dts'       => $doc['dts_no'],
-            'created'   => date('F d, Y g:i A', strtotime($doc['created_at'])),
-            'date_raw'  => date('Y-m-d', strtotime($doc['created_at'])),
-            'class'     => $doc['classification'] ?? 'N/A',
-            'type'      => $doc['doc_type'] ?? 'N/A',
-            'subject'   => $doc['subject'],
-            'sender'    => $sender,
-            'receiver'  => $receiver,
-            'signatory' => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
-            'status'    => $doc['status_name'],
-            'direction' => strtolower($doc['doc_direction'] ?? ''),
-            'search'    => $search_text
-        ];
+    // Receiver mapping logic remains same...
+    $receiver_names = 'N/A';
+    if (isset($all_recipients[$doc['id']])) {
+        $clean_names = array_map(function($p) { return explode(' (', $p)[0]; }, $all_recipients[$doc['id']]);
+        $receiver_names = implode(', ', $clean_names);
+    } elseif (!empty($doc['sender'])) {
+        $receiver_names = $doc['sender'];
     }
 
-    // Safely encode the entire dataset into a JS variable
+    $sender = "---";
+    if (strtolower($doc['doc_direction'] ?? '') === 'incoming') {
+        $sender = trim(($doc['origin_name'] ?? '') . ' - ' . ($doc['sender'] ?? ''), " -");
+    } else {
+        $sender = trim(($doc['c_division'] ?? '') . ' - ' . (($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')), " -");
+    }
+    $receiver = trim(($doc['address_name'] ?? 'Internal Routing') . ' - ' . $receiver_names, " -");
+
+    $search_text = strtolower($doc['dts_no'] . ' ' . $doc['subject'] . ' ' . ($doc['address_name'] ?? '') . ' ' . $receiver_names);
+
+    $export_payload[] = [
+        'dts'         => $doc['dts_no'],
+        'action_date' => date('F d, Y g:i A', strtotime($final_action_time)),
+        'created'     => date('F d, Y g:i A', strtotime($doc['created_at'])),
+        'date_raw'    => date('Y-m-d', strtotime($final_action_time)),
+        'class'       => $doc['classification'] ?? 'N/A',
+        'type'        => $doc['doc_type'] ?? 'N/A',
+        'subject'     => $doc['subject'],
+        'particulars' => $doc['particulars'] ?? '', // This will now fetch from the updated SQL query
+        'sender'      => $sender,
+        'receiver'    => $receiver,
+        'signatory'   => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
+        'creator'     => trim(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? 'System')),
+        'status'      => $doc['status_name'],
+        'direction'   => strtolower($doc['doc_direction'] ?? ''),
+        'search'      => $search_text
+    ];
+}
+
     $export_json = json_encode($export_payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 } catch (Exception $e) {
@@ -86,7 +86,6 @@ try {
     $history_docs = [];
     $export_json = "[]";
 }
-
 // ==========================================
 // ASSETS AND MODULAR LINKS
 // ==========================================
@@ -209,11 +208,12 @@ require_once BASE_PATH . 'includes/header.php';
                         <td>
                             <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
                             <div class="text-muted" style="font-size: 0.8rem;"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
-                            <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
                         </td>
                         <td>
                             <div class="text-dark"><?= date('M d, Y', strtotime($final_action_time)) ?></div>
                             <div class="text-muted small"><?= date('h:i A', strtotime($final_action_time)) ?></div>
+
+                            <span class="d-none date-target"><?= date('Y-m-d', strtotime($final_action_time)) ?></span>
                         </td>
                         <td class="text-dark search-target"><?= htmlspecialchars($doc['subject']) ?></td>
                         <td>

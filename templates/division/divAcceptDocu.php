@@ -87,7 +87,12 @@ if (!$doc) {
 }
 
 $page_title = "Accept Document";
-$attachments = $docManager->getDocumentAttachments($doc_id);
+
+// --- FETCH CATEGORIZED ATTACHMENTS ---
+$organized = $docManager->getDocumentAttachmentsByCategory($doc_id);
+$original_files = $organized['original'];
+$signed_files   = $organized['signed'];
+
 $history_logs = $docManager->getDocumentTrackingHistory($doc_id);
 $is_overdue = ($doc['due_date'] && strtotime($doc['due_date']) < strtotime('today'));
 
@@ -133,6 +138,7 @@ $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/track.css">
 <style>
     .visual-stepper::before { display: none !important; }
+    .signed-badge { background-color: #f0fdf4; border: 1px solid #bcf0da; color: #166534; padding: 15px; border-radius: 10px; }
 </style>
 ';
 
@@ -252,6 +258,26 @@ require_once BASE_PATH . 'includes/header.php';
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- SIGNED DOCUMENTS SECTION (THE NEW FEATURE) -->
+        <!-- ========================================== -->
+        <?php if (!empty($signed_files)): ?>
+        <div class="signed-badge mb-4 shadow-sm">
+            <h6 class="fw-bold text-success mb-3"><i class="fa-solid fa-file-signature me-2"></i> Final Signed Version (Official Scan)</h6>
+            <div class="list-group list-group-flush rounded border bg-white">
+                <?php foreach ($signed_files as $att):
+                    $file_name = htmlspecialchars(basename($att['file_path']));
+                    $file_url = '../../uploads/' . $file_name;
+                ?>
+                    <a href="<?= $file_url ?>" target="_blank" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-3">
+                        <span class="text-dark fw-bold small"><i class="fa-solid fa-file-pdf text-danger me-2"></i><?= $file_name ?></span>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3">Download / View</span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <h6 class="fw-bold text-dark mb-4 mt-2 border-top pt-4">
             <i class="fa-solid fa-circle-info me-2 text-primary"></i>
             Document Details
@@ -262,20 +288,18 @@ require_once BASE_PATH . 'includes/header.php';
                 <div class="accordion-item border-0">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed fw-bold custom-accordion-btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments">
-                            Attachments (<?= count($attachments) ?>)
+                            Original Reference Files (<?= count($original_files) ?>)
                         </button>
                     </h2>
                     <div id="collapseAttachments" class="accordion-collapse collapse" data-bs-parent="#attachmentAccordion">
                         <div class="accordion-body p-0 pt-2">
-                            <?php if (!empty($attachments)): ?>
+                            <?php if (!empty($original_files)): ?>
                                 <style> .file-link { text-decoration: underline; transition: color 0.2s ease; } .file-link:hover { color: #1d4ed8 !important; } </style>
                                 <ul class="list-group list-group-flush rounded-3 border">
-                                    <?php foreach ($attachments as $att):
-                                        // DYNAMIC ICON LOGIC
+                                    <?php foreach ($original_files as $att):
                                         $ext = strtolower(pathinfo($att['file_path'], PATHINFO_EXTENSION));
                                         $icon = 'fa-file';
                                         $color = 'text-secondary';
-
                                         if ($ext === 'pdf') { $icon = 'fa-file-pdf'; $color = 'text-danger'; }
                                         elseif (in_array($ext, ['doc', 'docx'])) { $icon = 'fa-file-word'; $color = 'text-primary'; }
                                         elseif (in_array($ext, ['xls', 'xlsx'])) { $icon = 'fa-file-excel'; $color = 'text-success'; }
@@ -293,7 +317,7 @@ require_once BASE_PATH . 'includes/header.php';
                                     <?php endforeach; ?>
                                 </ul>
                             <?php else: ?>
-                                <div class="text-muted small fst-italic p-3 border rounded-3 bg-light">No files attached to this document.</div>
+                                <div class="text-muted small fst-italic p-3 border rounded-3 bg-light">No original files attached.</div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -410,16 +434,33 @@ require_once BASE_PATH . 'includes/header.php';
 
         if (acceptForm && btnSubmitAccept) {
             acceptForm.addEventListener('submit', function() {
-                // Disable the button to prevent double-clicks
                 btnSubmitAccept.disabled = true;
-                // Add the spinning FontAwesome icon and change the text
                 btnSubmitAccept.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i> Accepting...';
-                // Slightly dim the button for visual feedback
                 btnSubmitAccept.style.opacity = '0.8';
                 btnSubmitAccept.style.cursor = 'not-allowed';
             });
         }
     });
+
+    function toggleActivityLogs() {
+        const extraLogs = document.querySelectorAll('.extra-log');
+        const btn = document.getElementById('toggleLogsBtn');
+        const isHidden = extraLogs[0].classList.contains('d-none');
+
+        extraLogs.forEach(log => {
+            if (isHidden) {
+                log.classList.remove('d-none');
+            } else {
+                log.classList.add('d-none');
+            }
+        });
+
+        if (isHidden) {
+            btn.innerHTML = 'Show Less <i class="fa-solid fa-chevron-up ms-1"></i>';
+        } else {
+            btn.innerHTML = 'See More <i class="fa-solid fa-chevron-down ms-1"></i>';
+        }
+    }
 </script>
 
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

@@ -4,19 +4,34 @@ require_once '../../classes/database.php';
 require_once '../../classes/DocumentManager.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Division') {
-    header("Location: " . BASE_URL . "login.php"); exit;
+    header("Location: " . BASE_URL . "login.php");
+    exit;
 }
 
 $doc_id = $_GET['id'] ?? null;
-if (!$doc_id) { header("Location: divHistory.php"); exit; }
+
+if (!$doc_id) {
+    header("Location: divHistory.php");
+    exit;
+}
 
 $user_id = $_SESSION['user_id'];
 $docManager = new DocumentManager($pdo);
 
-// FIX: Changed u.role to p.role since 'role' belongs to records_userprofile
 $stmt = $pdo->prepare("
-    SELECT d.*, c.name as class_name, t.name as type_name, s.name as status_name, s.category as status_category,
-           orig.name as origin_name, addr.name as address_name, u.first_name as c_fname, u.last_name as c_lname, p.role as c_role, divi.name as c_division, sig.first_name as sig_fname, sig.last_name as sig_lname
+    SELECT d.*,
+           c.name as class_name,
+           t.name as type_name,
+           s.name as status_name,
+           s.category as status_category,
+           orig.name as origin_name,
+           addr.name as address_name,
+           u.first_name as c_fname,
+           u.last_name as c_lname,
+           p.role as c_role,
+           divi.name as c_division,
+           sig.first_name as sig_fname,
+           sig.last_name as sig_lname
     FROM records_document d
     LEFT JOIN records_classification c ON d.classification_id = c.id
     LEFT JOIN records_documenttype t ON d.document_type_id = t.id
@@ -29,76 +44,245 @@ $stmt = $pdo->prepare("
     LEFT JOIN auth_user sig ON d.signatory_id = sig.id
     WHERE d.id = ?
 ");
+
 $stmt->execute([$doc_id]);
 $doc = $stmt->fetch();
 
-if (!$doc) { header("Location: divHistory.php"); exit; }
-
-$page_title = "Historical Record - " . htmlspecialchars($doc['dts_no']);
-$attachments = $docManager->getDocumentAttachments($doc_id);
-$history_logs = $docManager->getDocumentTrackingHistory($doc_id);
-
-// Visual Tracker Calculation
-$combined_status = strtoupper(trim($doc['status_category'])) . '|' . strtoupper(trim($doc['status_name']));
-$level = 1; $is_rejected = false;
-if (strpos($combined_status, 'REJECT') !== false || strpos($combined_status, 'CANCEL') !== false) { $is_rejected = true; }
-if (strpos($combined_status, 'CLOSE') !== false || strpos($combined_status, 'DISPATCHED') !== false) { $level = 5; }
-elseif (strpos($combined_status, 'FOR DISPATCH') !== false || strpos($combined_status, 'FOR-DISPATCH') !== false) { $level = 4; }
-elseif (strpos($combined_status, 'APPROV') !== false && strpos($combined_status, 'FOR') === false) { $level = 3; }
-elseif (strpos($combined_status, 'APPROVAL') !== false || strpos($combined_status, 'ONGOING') !== false) { $level = 2; }
-
-$step1 = 'completed';
-$step2 = ($level > 2) ? 'completed' : (($level == 2) ? 'active' : '');
-$step3 = ($level > 3) ? 'completed' : (($level == 3) ? 'active' : '');
-$step4 = ($level > 4) ? 'completed' : (($level == 4) ? 'active' : '');
-$step5 = ($level == 5) ? 'completed' : '';
-if ($is_rejected) {
-    if ($level <= 2) $step2 = 'danger'; elseif ($level == 3) $step3 = 'danger'; elseif ($level == 4) $step4 = 'danger'; elseif ($level == 5) $step5 = 'danger';
+if (!$doc) {
+    header("Location: divHistory.php");
+    exit;
 }
-$progress_width = ($level == 2) ? 25 : (($level == 3) ? 50 : (($level == 4) ? 75 : (($level == 5) ? 100 : 0)));
 
-// ==========================================
-// DYNAMIC TRACKER LABELS & ICONS (Based on Destination)
-// ==========================================
-$is_to_ro = in_array($doc['route_type'] ?? '', ['outside_dti', 'within_dti']);
+// RECIPIENT NAMES CALCULATION
+$stmtRecipients = $pdo->prepare("
+    SELECT u.first_name, u.last_name, divi.name as div_name
+    FROM records_documentrecipient dr
+    JOIN auth_user u ON dr.recipient_user_id = u.id
+    LEFT JOIN records_userprofile p ON u.id = p.user_id
+    LEFT JOIN records_division divi ON p.division_id = divi.id
+    WHERE dr.document_id = ?
+");
 
-$label_step4 = $is_to_ro ? 'Waiting to Dispatch' : 'Waiting to be Received';
-$label_step5 = $is_to_ro ? 'Dispatch' : 'Received';
+$stmtRecipients->execute([$doc_id]);
+$recipients = $stmtRecipients->fetchAll();
 
-$icon_step4 = $is_to_ro ? '<i class="fa-solid fa-boxes-packing"></i>' : '<i class="fa-solid fa-inbox"></i>';
-$icon_step5_success = $is_to_ro ? '<i class="fa-solid fa-paper-plane"></i>' : '<i class="fa-solid fa-check-double"></i>';
-// ==========================================
+$receiver_names = 'No specific personnel assigned';
+
+if (!empty($recipients)) {
+    $names = array_map(function($r) {
+        return trim($r['first_name'] . ' ' . $r['last_name']);
+    }, $recipients);
+
+    $receiver_names = implode(', ', $names);
+}
+
+$attachments = $docManager->getDocumentAttachments($doc_id);
+$history = $docManager->getDocumentTrackingHistory($doc_id);
+
+// IDENTIFY RECEIVING OFFICER (Only for documents created by Division)
+$receiving_officer = 'N/A';
+if ($doc['c_role'] === 'Division') {
+    foreach ($history as $log) {
+        if (isset($log['role']) && $log['role'] === 'RO') {
+            $receiving_officer = $log['first_name'] . ' ' . $log['last_name'];
+            break; // Grab the first Records Officer involved in the history
+        }
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| VISUAL TRACKER LOGIC (Robust string checks mapped to your styling)
+|--------------------------------------------------------------------------
+*/
+
+$combined_status = strtoupper(trim($doc['status_category'] ?? '')) . '|' . strtoupper(trim($doc['status_name'] ?? ''));
+
+$is_rejected = (
+    strpos($combined_status, 'REJECT') !== false ||
+    strpos($combined_status, 'CANCEL') !== false
+);
+
+$reject_reason = $is_rejected ? $docManager->getRejectReason($doc_id) : null;
+
+$level = 1;
+
+if ($is_rejected) {
+    $level = 5;
+} elseif (strpos($combined_status, 'CLOSE') !== false || strpos($combined_status, 'DISPATCHED') !== false || strpos($combined_status, 'RECEIVED') !== false) {
+    $level = 5;
+} elseif (strpos($combined_status, 'FOR DISPATCH') !== false || strpos($combined_status, 'FOR-DISPATCH') !== false || strpos($combined_status, 'ONGOING') !== false || strpos($combined_status, 'ROUTED') !== false || strpos($combined_status, 'SENT') !== false) {
+    $level = 4;
+} elseif (strpos($combined_status, 'APPROV') !== false && strpos($combined_status, 'FOR') === false) {
+    $level = 3;
+} elseif (strpos($combined_status, 'APPROVAL') !== false) {
+    $level = 2;
+}
+
+// Maps directly to your .step.active and .step.danger CSS
+$step1 = 'active';
+$step2 = ($level >= 2) ? 'active' : '';
+$step3 = ($level >= 3) ? 'active' : '';
+$step4 = ($level >= 4) ? 'active' : '';
+$step5 = ($level >= 5) ? 'active' : '';
+
+if ($is_rejected) {
+    $step5 = 'danger';
+}
+
+$progress_map = [
+    1 => 0,
+    2 => 25,
+    3 => 50,
+    4 => 75,
+    5 => 100
+];
+
+$progress_width = $progress_map[$level] ?? 0;
+
+/*
+|--------------------------------------------------------------------------
+| DYNAMIC TRACKER LABELS
+|--------------------------------------------------------------------------
+*/
+
+$is_to_ro = in_array(
+    $doc['route_type'] ?? '',
+    ['outside_dti', 'within_dti']
+);
+
+$label_step4 = $is_to_ro
+    ? 'Waiting to Dispatch'
+    : 'Waiting to be Received';
+
+$label_step5 = $is_to_ro
+    ? 'Dispatched'
+    : 'Received';
+
+$icon_step4 = $is_to_ro
+    ? '<i class="fa-solid fa-boxes-packing"></i>'
+    : '<i class="fa-solid fa-inbox"></i>';
+
+$icon_step5_success = $is_to_ro
+    ? '<i class="fa-solid fa-paper-plane"></i>'
+    : '<i class="fa-solid fa-check-double"></i>';
+
+$page_title = "Document View - " . $doc['dts_no'];
 
 $extra_css = '
+<link rel="stylesheet" href="' . BASE_URL . 'static/css/cards.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/document.css">
-<link rel="stylesheet" href="' . BASE_URL . 'static/css/accept_docu.css">
-<link rel="stylesheet" href="' . BASE_URL . 'static/css/status.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/track.css">
-<link rel="stylesheet" href="' . BASE_URL . 'static/css/modal.css">
-<style>.visual-stepper::before { display: none !important; }</style>
+
+
+<style>
+    .detail-label{
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: .5px;
+        margin-bottom: 4px;
+    }
+
+    .detail-value{
+        font-size: 0.97rem;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.6;
+    }
+
+    .detail-card{
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 16px;
+        height: 100%;
+    }
+    .section-title{
+        font-size: 0.85rem;
+        font-weight: 800;
+        letter-spacing: .7px;
+        color: #64748b;
+        text-transform: uppercase;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .progress-line{
+        position: absolute;
+        top: 29px;
+        left: 9%;
+        right: 9%;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 20px;
+        z-index: 1;
+    }
+
+    .progress-line-fill{
+        position: absolute;
+        top: 29px;
+        left: 9%;
+        height: 5px;
+        background: #0d6efd;
+        border-radius: 20px;
+        z-index: 2;
+        transition: width .4s ease;
+    }
+
+    .attachment-card{
+        transition: 0.2s ease;
+    }
+
+    .attachment-card:hover{
+        background: #f1f5f9 !important;
+        transform: translateY(-1px);
+    }
+
+    .tracking-card{
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .visual-stepper::before { display: none !important; }
+</style>
 ';
-$extra_js = '<script src="' . BASE_URL . 'static/js/track.js"></script>';
 
 require_once BASE_PATH . 'includes/header.php';
 ?>
 
-<div class="dashboard-inner p-3">
-    <div class="mb-3 d-flex justify-content-between align-items-center">
-        <a href="divHistory.php" class="btn-back text-decoration-none text-secondary"><i class="fa-solid fa-chevron-left me-2"></i><span class="fw-bold">Back to History</span></a>
+<div class="dashboard-inner p-4">
 
-        <button type="button" class="btn btn-sm btn-primary rounded text-white px-3" data-bs-toggle="modal" data-bs-target="#reuseConfirmModal">
-            <i class="fa-solid fa-copy me-1"></i> Reuse Record
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="divHistory.php"
+               class="text-decoration-none text-muted mb-2 d-inline-block fw-semibold">
+                <i class="fa-solid fa-arrow-left me-2"></i>Back to History
+            </a>
+
+            <h3 class="fw-bold text-dark mb-0">
+                <i class="fa-solid fa-file-lines me-2 text-primary"></i>
+                <?= htmlspecialchars($doc['dts_no']) ?>
+            </h3>
+        </div>
+
+        <button class="btn btn-outline-primary fw-bold shadow-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#reuseConfirmModal">
+            <i class="fa-solid fa-copy me-2"></i>
+            Reuse Record
         </button>
     </div>
 
-    <div class="detail-card border rounded shadow-sm bg-white p-4">
-        <div class="detail-header d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-            <h5 class="fw-bold mb-0">DTS No. <span class="text-primary"><?= htmlspecialchars($doc['dts_no']) ?></span></h5>
-            <span class="status <?= strtolower(str_replace(' ', '-', $doc['status_category'])) ?>"><?= htmlspecialchars($doc['status_name']) ?></span>
-        </div>
-
-        <div class="bg-light border rounded p-4 mb-4 shadow-sm">
-            <h6 class="fw-bold text-dark mb-4 text-center text-uppercase" style="letter-spacing: 1px;"><i class="fa-solid fa-route text-secondary me-2"></i> Document Status</h6>
+    <!-- ---------------------------------------------------- -->
+    <!-- DYNAMIC DOCUMENT STATUS VISUAL TRACKER DESIGN        -->
+    <!-- ---------------------------------------------------- -->
+     <div class="bg-light border rounded p-4 mb-4 shadow-sm">
+            <h6 class="fw-bold text-dark mb-4 text-center text-uppercase" style="letter-spacing: 1px;"><i class="fa-solid fa-route text-secondary me-2"></i> DOCUMENT STATUS</h6>
             <div class="position-relative mt-4 mb-2">
                 <div style="position: absolute; top: 15px; left: 10%; right: 10%; height: 4px; background: #e2e8f0; z-index: 1;"></div>
                 <div style="position: absolute; top: 15px; left: 10%; width: calc(80% * <?= $progress_width ?> / 100); height: 4px; background: <?= $is_rejected ? '#dc3545' : '#10b981' ?>; z-index: 2; transition: width 0.5s ease;"></div>
@@ -116,118 +300,410 @@ require_once BASE_PATH . 'includes/header.php';
                     <div class="label">Approved</div>
                 </div>
                 <div class="step <?= $step4 ?>">
-                <div class="circle"><?= $icon_step4 ?></div>
-                <div class="label"><?= $label_step4 ?></div>
-            </div>
-            <div class="step <?= $step5 ?>">
-                <div class="circle">
-                    <?php if($is_rejected): ?>
-                        <i class="fa-solid fa-xmark"></i>
-                    <?php else: ?>
-                        <?= $icon_step5_success ?>
-                    <?php endif; ?>
+                    <div class="circle"><?= $icon_step4 ?></div>
+                    <div class="label"><?= $label_step4 ?></div>
                 </div>
-                <div class="label"><?= ($is_rejected) ? 'Rejected' : $label_step5 ?></div>
+                <div class="step <?= $step5 ?>">
+                    <div class="circle">
+                        <?php if($is_rejected): ?>
+                            <i class="fa-solid fa-xmark"></i>
+                        <?php else: ?>
+                            <?= $icon_step5_success ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="label"><?= ($is_rejected) ? 'Rejected' : $label_step5 ?></div>
+                </div>
             </div>
             </div>
+    </div>
 
-        <div class="border rounded p-4 mb-5 shadow-sm" style="background-color: #f8fafc;">
-            <h6 class="fw-bold text-dark mb-4"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i> Activity Log Timeline</h6>
-            <div class="timeline-container">
-                <?php foreach ($history_logs as $index => $log):
-                    $icon = 'fa-arrow-right'; $bg = '#1d4ed8';
-                    if(strtoupper($log['action_taken']) === 'ENCODED') { $icon = 'fa-plus'; $bg = '#10b981'; }
-                    elseif(strtoupper($log['action_taken']) === 'EDITED') { $icon = 'fa-pen'; $bg = '#f59e0b'; }
-                    elseif(strtoupper($log['action_taken']) === 'CANCELLED' || strtoupper($log['action_taken']) === 'REJECTED') { $icon = 'fa-xmark'; $bg = '#dc3545'; }
-                    elseif(strtoupper($log['action_taken']) === 'APPROVED' || strpos(strtoupper($log['action_taken']), 'CLOSED') !== false) { $icon = 'fa-check'; $bg = '#10b981'; }
-                    $hidden_class = ($index >= 3) ? 'd-none extra-log' : '';
-                ?>
-                <div class="timeline-item <?= $hidden_class ?>">
-                    <div class="timeline-icon" style="background-color: <?= $bg ?>;"><i class="fa-solid <?= $icon ?>"></i></div>
-                    <div class="timeline-content bg-white shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark" style="font-size: 0.9rem;"><?= htmlspecialchars(strtoupper($log['action_taken'])) ?></span>
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-2 py-1" style="font-size: 0.7rem;"><?= date('M d, Y h:i A', strtotime($log['timestamp'])) ?></span>
+    <!-- ---------------------------------------------------- -->
+    <!-- MAIN INFORMATION LAYOUT COLUMNS                     -->
+    <!-- ---------------------------------------------------- -->
+    <div class="row g-4">
+
+        <div class="col-lg-8">
+
+            <div class="bg-white rounded-4 shadow-sm p-4 border h-100">
+
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">
+                            <i class="fa-solid fa-circle-info me-2 text-secondary"></i>
+                            Document Details
+                        </h4>
+                        <p class="text-muted mb-0 small">
+                            Complete information and metadata of the selected document.
+                        </p>
+                    </div>
+                    <span class="badge bg-<?= $is_rejected ? 'danger' : 'secondary' ?> px-3 py-2 rounded-pill">
+                        <?= htmlspecialchars($doc['status_name']) ?>
+                    </span>
+                </div>
+
+                <!-- SPECIFICATIONS -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Classification</div>
+                            <div class="detail-value text-primary">
+                                <?= htmlspecialchars($doc['class_name'] ?? 'N/A') ?>
+                            </div>
                         </div>
-                        <p class="mb-2 text-secondary" style="font-size: 0.85rem;"><?= htmlspecialchars($log['remarks']) ?></p>
-                        <div class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-user me-1 text-primary"></i> <span class="fw-bold text-dark"><?= htmlspecialchars($log['first_name'] . ' ' . $log['last_name']) ?></span> (<?= htmlspecialchars($log['role'] ?? 'User') ?> - <?= htmlspecialchars($log['division_name'] ?? 'System') ?>)</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Document Type</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($doc['type_name'] ?? 'N/A') ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Due Date</div>
+                            <div class="detail-value <?= empty($doc['due_date']) ? 'text-muted' : 'text-danger' ?>">
+                                <?= empty($doc['due_date']) ? 'None' : date('F d, Y', strtotime($doc['due_date'])) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Particulars</div>
+                            <div class="detail-value fw-normal">
+                                <?= htmlspecialchars($doc['particulars'] ?? 'None provided.') ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="detail-card">
+                            <div class="detail-label">Subject</div>
+                            <div class="detail-value fs-5">
+                                <?= htmlspecialchars($doc['subject']) ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <?php endforeach; ?>
-                <?php if(count($history_logs) > 3): ?>
-                    <div class="text-center mt-4"><button type="button" id="toggleLogsBtn" class="btn btn-sm btn-outline-primary rounded-pill px-4 py-2 fw-bold" onclick="toggleActivityLogs()">See More <i class="fa-solid fa-chevron-down ms-1"></i></button></div>
+
+                <h6 class="section-title">Routing Information</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Signatory</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars(
+                                    trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? ''))
+                                ) ?: 'None' ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RECEIVING OFFICER FIELD: Only for Division created documents -->
+                    <?php if ($doc['c_role'] === 'Division'): ?>
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Receiving Officer</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($receiving_officer) ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- ADDRESS SECTION -->
+                <h6 class="section-title">Address Information</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Division / Group / Office Name</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Recipient Name(s)</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($receiver_names) ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ORIGIN SECTION: Hidden for Outgoing Division Documents -->
+                <?php if (!empty($doc['origin_name'])): ?>
+                <h6 class="section-title">Origin Information</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Office / Agency</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($doc['origin_name']) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="detail-card">
+                            <div class="detail-label">Sender / Contact Person</div>
+                            <div class="detail-value">
+                                <?= htmlspecialchars($doc['sender'] ?? 'N/A') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <?php endif; ?>
+
+                <h6 class="section-title">Attachments</h6>
+                <?php if (empty($attachments)): ?>
+                    <div class="alert alert-light border text-muted mb-0">
+                        <i class="fa-solid fa-paperclip me-2"></i>
+                        No files attached.
+                    </div>
+                <?php else: ?>
+                    <div class="d-flex flex-column gap-3">
+                        <?php foreach ($attachments as $att):
+                            // DYNAMIC ICON LOGIC
+                            $ext = strtolower(pathinfo($att['file_path'], PATHINFO_EXTENSION));
+                            $icon = 'fa-file';
+                            $color = 'text-secondary';
+
+                            if ($ext === 'pdf') { $icon = 'fa-file-pdf'; $color = 'text-danger'; }
+                            elseif (in_array($ext, ['doc', 'docx'])) { $icon = 'fa-file-word'; $color = 'text-primary'; }
+                            elseif (in_array($ext, ['xls', 'xlsx'])) { $icon = 'fa-file-excel'; $color = 'text-success'; }
+                            elseif (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) { $icon = 'fa-image'; $color = 'text-warning'; }
+                        ?>
+                            <a href="<?= BASE_URL . $att['file_path'] ?>"
+                               target="_blank"
+                               class="attachment-card text-decoration-none bg-light border rounded-4 p-3 d-flex align-items-center text-dark">
+
+                                <div class="me-3">
+                                    <i class="fa-solid <?= $icon ?> <?= $color ?> fs-3"></i>
+                                </div>
+
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-dark">
+                                        <?= basename($att['file_path']) ?>
+                                    </div>
+                                    <small class="text-muted">
+                                        Click to view attachment
+                                    </small>
+                                </div>
+
+                                <i class="fa-solid fa-arrow-up-right-from-square text-muted"></i>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
             </div>
         </div>
 
-        <h6 class="border-bottom pb-2 mb-4 text-secondary mt-4" style="font-size: 0.9rem;"><i class="fa-solid fa-circle-info me-2"></i>Historical Data (Read-Only)</h6>
+        <div class="col-lg-4">
 
-        <div class="row g-3 mb-3">
-            <div class="col-md-3"><div class="data-group"><label class="text-muted text-uppercase small">Deadline</label><p class="data-value text-dark"><?= !empty($doc['due_date']) ? date('M d, Y', strtotime($doc['due_date'])) : 'None' ?></p></div></div>
-            <div class="col-md-3"><div class="data-group"><label class="text-muted text-uppercase small">Classification</label><p class="data-value text-dark"><?= htmlspecialchars($doc['class_name'] ?? 'N/A') ?></p></div></div>
-            <div class="col-md-3"><div class="data-group"><label class="text-muted text-uppercase small">Document Type</label><p class="data-value text-dark"><?= htmlspecialchars($doc['type_name'] ?? 'N/A') ?></p></div></div>
-            <div class="col-md-3"><div class="data-group"><label class="text-muted text-uppercase small">Signatory</label><p class="data-value text-dark"><?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? ''))) ?></p></div></div>
-        </div>
-        <div class="row mb-3"><div class="col-12"><div class="data-group"><label class="text-muted text-uppercase small">Subject</label><div class="data-value textarea-style text-dark bg-light py-2 px-3 border-0"><?= htmlspecialchars($doc['subject']) ?></div></div></div></div>
-        <div class="row g-3 mb-3">
-            <div class="col-md-6"><div class="data-group"><label class="text-muted text-uppercase small">Destination / Agency</label><div class="data-value textarea-style bg-light text-dark py-2 px-3 border-0"><?= htmlspecialchars($doc['address_name'] ?? 'External Office') ?></div></div></div>
-            <div class="col-md-6"><div class="data-group"><label class="text-muted text-uppercase small">Particulars</label><div class="data-value textarea-style bg-light text-dark py-2 px-3 border-0"><?= nl2br(htmlspecialchars($doc['particulars'] ?? 'No particulars provided.')) ?></div></div></div>
-        </div>
+            <?php if ($is_rejected && $reject_reason): ?>
+                <div class="bg-white rounded-4 shadow-sm p-4 border border-danger mb-4">
+                    <h6 class="fw-bold text-danger mb-3">
+                        <i class="fa-solid fa-circle-exclamation me-2"></i>
+                        Rejection Remarks
+                    </h6>
+                    <p class="mb-0 text-dark"
+                       style="white-space: pre-wrap; line-height: 1.6;">
+                        <?= htmlspecialchars($reject_reason) ?>
+                    </p>
+                </div>
+            <?php endif; ?>
 
-        <?php if (!empty($attachments)): ?>
-            <label class="text-muted text-uppercase small mt-3 mb-2 d-block">Original Attachments</label>
-            <style> .file-link { text-decoration: underline; transition: color 0.2s ease; } .file-link:hover { color: #1d4ed8 !important; } </style>
-            <ul class="list-group list-group-flush rounded border">
-                <?php foreach ($attachments as $att):
-                    // DYNAMIC ICON LOGIC
-                    $ext = strtolower(pathinfo($att['file_path'], PATHINFO_EXTENSION));
-                    $icon = 'fa-file';
-                    $color = 'text-secondary';
+            <div class="bg-white rounded-4 shadow-sm p-4 border h-100">
+                <div class="border-bottom pb-3 mb-4">
+                    <h4 class="fw-bold text-dark mb-1">
+                        <i class="fa-solid fa-clock-rotate-left me-2 text-secondary"></i>
+                        Tracking History
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        All actions and movements related to this document.
+                    </p>
+                </div>
 
-                    if ($ext === 'pdf') { $icon = 'fa-file-pdf'; $color = 'text-danger'; }
-                    elseif (in_array($ext, ['doc', 'docx'])) { $icon = 'fa-file-word'; $color = 'text-primary'; }
-                    elseif (in_array($ext, ['xls', 'xlsx'])) { $icon = 'fa-file-excel'; $color = 'text-success'; }
-                    elseif (in_array($ext, ['jpg', 'jpeg', 'png'])) { $icon = 'fa-image'; $color = 'text-warning'; }
-
-                    $file_name = htmlspecialchars(basename($att['file_path']));
-                    $file_url = '../../uploads/' . $file_name;
-                ?>
-                    <li class="list-group-item py-2 px-3 bg-light">
-                        <div class="d-flex align-items-center gap-2 text-truncate">
-                            <i class="fa-solid <?= $icon ?> <?= $color ?>" style="font-size: 0.85rem;"></i>
-                            <a href="<?= $file_url ?>" target="_blank" class="text-dark small fw-bold text-truncate file-link" title="<?= $file_name ?>">
-                                <?= $file_name ?>
-                            </a>
+                <!-- ---------------------------------------------------- -->
+                <!-- TRACKING TIMELINE LOGS WITH "SEE MORE" COLLAPSIBLE LOGIC -->
+                <!-- ---------------------------------------------------- -->
+                <div class="tracking-history px-1">
+                    <?php if (empty($history)): ?>
+                        <div class="alert alert-light border text-muted">
+                            No history recorded yet.
                         </div>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
+                    <?php else: ?>
+                        <?php foreach ($history as $idx => $entry):
+                            // Determine whether to collapse entries past the first 3 indices using bootstrap d-none
+                            $is_collapsible = ($idx >= 3);
+                            $entry_class = $is_collapsible ? 'track-item-collapsible d-none' : '';
+                        ?>
+                            <div class="track-item d-flex mb-4 position-relative <?= $entry_class ?>">
 
-        <div class="created-info pt-4 mt-4 border-top">
-            <p class="fw-bold mb-0 text-muted" style="font-size: 0.85rem;">Created by: <span class="text-dark"><?= htmlspecialchars($doc['c_fname'] . ' ' . $doc['c_lname']) ?></span></p>
-            <p class="mb-0 text-muted" style="font-size: 0.85rem;"><?= htmlspecialchars($doc['c_division'] ?? 'System User') ?></p>
+                                <?php if ($idx !== count($history) - 1): ?>
+                                    <div class="track-line position-absolute"
+                                         style="left: 18px; top: 42px; bottom: -30px; width: 2px; background-color: #e2e8f0;">
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="track-icon rounded-circle bg-light border d-flex align-items-center justify-content-center flex-shrink-0"
+                                     style="width: 38px; height: 38px; z-index: 2;">
+                                    <?php
+                                        $action = strtoupper($entry['action_taken']);
+
+                                        if ($action === 'ENCODED' || $action === 'CREATED') echo '<i class="fa-solid fa-asterisk text-primary"></i>';
+                                        elseif ($action === 'UPDATED' || $action === 'EDITED') echo '<i class="fa-solid fa-pen text-secondary"></i>';
+                                        elseif ($action === 'RECEIVED') echo '<i class="fa-solid fa-check text-success"></i>';
+                                        elseif ($action === 'APPROVED') echo '<i class="fa-solid fa-stamp text-success"></i>';
+                                        elseif ($action === 'REJECTED') echo '<i class="fa-solid fa-xmark text-danger"></i>';
+                                        elseif ($action === 'DISPATCHED' || $action === 'ROUTED') echo '<i class="fa-solid fa-paper-plane text-info"></i>';
+                                        elseif ($action === 'CANCELLED') echo '<i class="fa-solid fa-ban text-warning"></i>';
+                                        elseif ($action === 'CLOSED') echo '<i class="fa-solid fa-lock text-secondary"></i>';
+                                        else echo '<i class="fa-solid fa-clock-rotate-left text-muted"></i>';
+                                    ?>
+                                </div>
+
+                                <div class="ms-3 w-100">
+                                    <div class="tracking-card">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <div class="fw-bold text-dark">
+                                                    <?= htmlspecialchars($entry['action_taken']) ?>
+                                                </div>
+                                                <small class="text-muted">
+                                                    <?= date('F d, Y - h:i A', strtotime($entry['timestamp'])) ?>
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <p class="text-secondary mb-3"
+                                           style="font-size: 0.9rem; line-height: 1.6;">
+                                            <?= htmlspecialchars($entry['remarks']) ?>
+                                        </p>
+
+                                        <div class="d-flex align-items-center border-top pt-3">
+                                            <i class="fa-solid fa-user-circle text-muted fs-5 me-2"></i>
+                                            <div>
+                                                <div class="fw-bold text-dark"
+                                                     style="font-size: 0.85rem;">
+                                                    <?= htmlspecialchars($entry['first_name'] . ' ' . $entry['last_name']) ?>
+                                                </div>
+                                                <small class="text-muted">
+                                                    <?= htmlspecialchars($entry['role']) ?>
+                                                    <?= $entry['division_name'] ? '- ' . htmlspecialchars($entry['division_name']) : '' ?>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <!-- See More Toggle Controller -->
+                        <?php if (count($history) > 3): ?>
+                            <div class="text-center mt-3 mb-2">
+                                <button id="btn-toggle-history" class="btn btn-sm btn-outline-primary fw-bold shadow-sm px-4 rounded-pill">
+                                    <i class="fa-solid fa-chevron-down me-2"></i>See More (<?= count($history) - 3 ?> more)
+                                </button>
+                            </div>
+                        <?php endif; ?>
+
+                    <?php endif; ?>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+        <!-- Footer Metadata -->
+         <div class="mt-4 pt-4 border-top d-flex align-items-center">
+            <div class="creator-avatar me-2"
+                 style="width: 34px; height: 34px; background: #e2e8f0; color: #475569; display:flex; align-items:center; justify-content:center; border-radius:50%;">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="text-dark mb-0">
+                <div class="fw-bold text-dark small">Created By: <span class="text-primary"><?= htmlspecialchars($doc['c_fname'].' '.$doc['c_lname']) ?></span></div>
+                <div class="text-muted" style="font-size: 0.7rem;"><?= htmlspecialchars($doc['c_division']) ?>
+            <p>
+                <?= date('F d, Y h:i A', strtotime($doc['created_at'])) ?>
+                </p>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
 
-<div class="modal fade" id="reuseConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+<div class="modal fade"
+     id="reuseConfirmModal"
+     tabindex="-1"
+     aria-hidden="true"
+     style="z-index: 1060;">
+
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content custom-modal" style="border: 2px solid #0d6efd;">
+        <div class="modal-content custom-modal"
+             style="border: 2px solid #0d6efd; border-radius: 20px;">
+
             <div class="modal-body text-center p-4">
                 <i class="fa-solid fa-copy text-primary mb-3" style="font-size: 3rem;"></i>
                 <h5 class="fw-bold text-dark">Reuse Record?</h5>
-                <p class="text-muted" style="font-size: 0.9rem;">Are you sure you want to reuse this document? A new draft will be created with the same details and attachments.</p>
-                <div class="d-flex flex-column gap-2 mt-4">
-                    <form action="../../controllers/reuseDocument.php" method="POST" class="m-0 w-100">
-                        <input type="hidden" name="doc_id" value="<?= $doc['id'] ?>">
-                        <button type="submit" class="btn btn-primary fw-bold w-100">Yes, Reuse</button>
-                    </form>
-                    <button type="button" class="btn btn-light w-100 border" data-bs-dismiss="modal">Cancel</button>
+                <p class="text-muted" style="font-size: 0.92rem; line-height: 1.6;">
+                    Are you sure you want to reuse this document?
+                    A new draft will be created with the same details and attachments.
+                </p>
+
+                <form action="../../controllers/reuseDocument.php" method="POST" class="m-0 w-100">
+                    <input type="hidden" name="doc_id" value="<?= $doc['id'] ?>">
+                    <button type="submit" class="btn btn-primary fw-bold w-100">Yes, Reuse</button>
+                </form>
+                    <button type="button" class="btn btn-light border w-100" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Simple Vanilla Javascript to handle the See More collapsible flow toggle smoothly -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const collapsibles = document.querySelectorAll('.track-item-collapsible');
+    const toggleButton = document.getElementById('btn-toggle-history');
+
+    if (toggleButton && collapsibles.length > 0) {
+        toggleButton.addEventListener('click', function () {
+            const isCurrentlyCollapsed = collapsibles[0].classList.contains('d-none');
+
+            collapsibles.forEach(function (element) {
+                if (isCurrentlyCollapsed) {
+                    element.classList.remove('d-none');
+                    // Simple CSS fade-in
+                    element.style.opacity = '0';
+                    element.style.transition = 'opacity 0.25s ease-in-out';
+                    setTimeout(function() {
+                        element.style.opacity = '1';
+                    }, 50);
+                } else {
+                    element.classList.add('d-none');
+                }
+            });
+
+            if (isCurrentlyCollapsed) {
+                toggleButton.innerHTML = '<i class="fa-solid fa-chevron-up me-2"></i>Show Less';
+            } else {
+                toggleButton.innerHTML = '<i class="fa-solid fa-chevron-down me-2"></i>See More (' + collapsibles.length + ' more)';
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once BASE_PATH . 'includes/footer.php'; ?>

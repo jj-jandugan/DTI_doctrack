@@ -77,8 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     case 'RO':
                         header("Location: " . $absolute_url . "templates/ro/roDashboard.php");
                         break;
-                    case 'RD':
-                    case 'ARD':
+                    case 'Signatory':
                         header("Location: " . $absolute_url . "templates/signatory/signDashboard.php");
                         break;
                     case 'Division':

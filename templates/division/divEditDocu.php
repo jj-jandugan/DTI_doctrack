@@ -13,10 +13,12 @@ if (!$document_id) { header("Location: divOutgoing.php"); exit; }
 $user_id = $_SESSION['user_id'];
 $docManager = new DocumentManager($pdo);
 
+// Fetch Session Messages
 $success_msg = $_SESSION['success_msg'] ?? '';
 $error_msg = $_SESSION['error_msg'] ?? '';
 unset($_SESSION['success_msg'], $_SESSION['error_msg']);
 
+// 1. Fetch Existing Data
 $doc = $docManager->getDocumentById($document_id, $user_id);
 if (!$doc) { header("Location: divOutgoing.php"); exit; }
 
@@ -27,6 +29,15 @@ $current_recipients = $stmtRecip->fetchAll(PDO::FETCH_COLUMN);
 
 $history_logs = $docManager->getDocumentTrackingHistory($document_id);
 
+// Logic to determine which Group ID belongs to the current document address
+$selected_group_id = 0;
+if ($doc['route_type'] === 'group' && isset($doc['address_name'])) {
+    $stmtGrp = $pdo->prepare("SELECT id FROM records_distributiongroup WHERE group_name = ? LIMIT 1");
+    $stmtGrp->execute([$doc['address_name']]);
+    $selected_group_id = $stmtGrp->fetchColumn();
+}
+
+// Determine current division if routed by division
 $current_div_id = '';
 if ($doc['route_type'] === 'division' && !empty($current_recipients)) {
     $current_div_id = $docManager->getUserDivisionId($current_recipients[0]);
@@ -66,7 +77,7 @@ $is_locked = in_array($status_cat, $locked_statuses) || in_array($status_name, $
 $is_rejected = ($status_cat === 'REJECTED' || $status_name === 'REJECTED');
 $reject_reason = $is_rejected ? $docManager->getRejectReason($document_id) : '';
 
-// Visual Tracker
+// Visual Tracker calculation
 $combined_status = $status_cat . '|' . $status_name;
 $level = 1;
 if (strpos($combined_status, 'CLOSE') !== false || strpos($combined_status, 'DISPATCHED') !== false) { $level = 5; }
@@ -258,9 +269,7 @@ require_once BASE_PATH . 'includes/header.php';
                                 </div>
                                 <div class="col-md-6">
                                     <div id="routeUsersContainer" class="checkbox-container border rounded p-2 bg-white" style="max-height: 120px; overflow-y: auto;">
-                                        <?php if ($is_locked && !empty($current_recipients)): ?>
-                                            <span class="text-muted small">Recipients locked.</span>
-                                        <?php endif; ?>
+                                        <!-- Checkboxes will be populated by JS script below -->
                                     </div>
                                 </div>
                             </div>
@@ -270,7 +279,7 @@ require_once BASE_PATH . 'includes/header.php';
                             <select class="form-select custom-input" name="route_group" id="route_group">
                                 <option value="">Select Distribution Group...</option>
                                 <?php foreach ($groups as $grp): ?>
-                                    <option value="<?= $grp['id'] ?>" <?= ($doc['route_type'] === 'group' && in_array($grp['id'], $current_recipients)) ? 'selected' : '' ?>><?= htmlspecialchars($grp['group_name']) ?></option>
+                                    <option value="<?= $grp['id'] ?>" <?= ($doc['route_type'] === 'group' && $selected_group_id == $grp['id']) ? 'selected' : '' ?>><?= htmlspecialchars($grp['group_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -547,10 +556,50 @@ require_once BASE_PATH . 'includes/header.php';
     </div>
 </div>
 
+<!-- DATA SCRIPTS FOR JS FILTERS -->
 <script id="usersData" type="application/json"><?= json_encode($users_by_div) ?></script>
 <script id="recipientsData" type="application/json"><?= json_encode($current_recipients) ?></script>
 
 <script>
+    // INITIALIZATION: Fix for the blank Division Recipients field
+    document.addEventListener("DOMContentLoaded", function() {
+        const routeDivision = document.getElementById('routeDivision');
+        const usersByDiv = JSON.parse(document.getElementById('usersData').textContent);
+        const selectedRecipients = JSON.parse(document.getElementById('recipientsData').textContent);
+        const container = document.getElementById('routeUsersContainer');
+
+        function populateCheckboxes(divId) {
+            if (!divId || !usersByDiv[divId]) {
+                container.innerHTML = '<span class="text-muted small italic">Select division first...</span>';
+                return;
+            }
+            container.innerHTML = '';
+            usersByDiv[divId].forEach(user => {
+                // EXCLUSION: Don't show the person who created the doc or a system user
+                const isChecked = selectedRecipients.includes(String(user.id)) || selectedRecipients.includes(parseInt(user.id)) ? 'checked' : '';
+                const div = document.createElement('div');
+                div.className = 'form-check mb-1';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" name="route_users[]" value="${user.id}" id="u${user.id}" ${isChecked}>
+                    <label class="form-check-label small fw-bold" for="u${user.id}">${user.first_name} ${user.last_name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Run immediately if division is already set
+        if (routeDivision && routeDivision.value) {
+            populateCheckboxes(routeDivision.value);
+        }
+
+        // Add listener for future changes
+        if (routeDivision) {
+            routeDivision.addEventListener('change', function() {
+                populateCheckboxes(this.value);
+            });
+        }
+    });
+
     // 1. Form Validation BEFORE opening the Save Modal
     document.getElementById('btnSaveTrigger')?.addEventListener('click', function() {
         const form = document.getElementById('editDocForm');

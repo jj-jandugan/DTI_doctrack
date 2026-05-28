@@ -19,8 +19,10 @@ $docManager = new DocumentManager($pdo);
 $doc_types = $docManager->getDocumentTypes();
 $classifications = $docManager->getClassifications();
 
-// IMPORTANT: Ensure this function fetches where s.name = 'APPROVED'
+// 1. Fetch the documents (Now includes external_receivers column)
 $outgoing_docs = $docManager->getApprovedForDispatch();
+// 2. Fetch internal recipients map
+$all_recipients = $docManager->getRecipientsByDocument();
 
 $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/creator.css">
@@ -112,7 +114,30 @@ require_once BASE_PATH . 'includes/header.php';
                             </td>
                             <td class="address-cell">
                                 <span class="address-main"><?= htmlspecialchars($doc['address_name'] ?? 'External Agency') ?></span>
-                                <span class="address-sub"><?= htmlspecialchars($doc['sender'] ?? 'No specific recipient') ?></span>
+                                <span class="address-sub">
+                                    <?php
+                                        $sub_label = 'No specific recipient';
+
+                                        // 1. If it is an external route, prioritize the new external_receivers column
+                                        if (in_array($doc['route_type'], ['outside_dti', 'within_dti'])) {
+                                            if (!empty($doc['external_receivers'])) {
+                                                $sub_label = $doc['external_receivers'];
+                                            } else {
+                                                $sub_label = $doc['sender'] ?: 'No contact person provided';
+                                            }
+                                        }
+                                        // 2. If it is internal (Division/Group), use the recipient names from our map
+                                        else {
+                                            if (isset($all_recipients[$doc['id']]) && !empty($all_recipients[$doc['id']])) {
+                                                $clean_names = array_map(function($person) {
+                                                    return explode(' (', $person)[0];
+                                                }, $all_recipients[$doc['id']]);
+                                                $sub_label = implode(', ', $clean_names);
+                                            }
+                                        }
+                                        echo htmlspecialchars($sub_label);
+                                    ?>
+                                </span>
                             </td>
                             <td class="text-dark text-truncate search-target" style="max-width: 200px;" title="<?= htmlspecialchars($doc['subject']) ?>">
                                 <?= htmlspecialchars($doc['subject']) ?>

@@ -4,7 +4,7 @@ require_once '../../classes/database.php';
 require_once '../../classes/DocumentManager.php';
 
 // Security Check
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Signatory') {
     header("Location: " . BASE_URL . "login.php");
     exit;
 }

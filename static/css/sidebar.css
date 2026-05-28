@@ -151,7 +151,7 @@
 
     .sidebar-wrapper {
         position: fixed;
-        left: -300px;
+        left: 0;
     }
 
     .sidebar-wrapper.collapsed {

@@ -93,11 +93,11 @@ class Dashboard {
 
     public function getROIncomingCount($user_id) {
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(DISTINCT d.id) FROM records_document d
+            SELECT COUNT(DISTINCT d.id)
+            FROM records_document d
             JOIN records_status s ON d.status_id = s.id
             WHERE d.creator_id = ?
-              AND s.category IN ('PENDING', 'DRAFT')
-              AND d.route_type = 'incoming'
+              AND s.category IN ('FOR-APPROVAL', 'ONGOING', 'APPROVED', 'REJECTED')
         ");
         $stmt->execute([$user_id]);
         return $stmt->fetchColumn() ?: 0;
@@ -140,18 +140,17 @@ class Dashboard {
     }
 
     /**
-     * MISSING METHOD FIXED:
-     * Counts documents for RO based on status category.
+     * FIXED: Standardized status count for RO Dashboard Charts
      */
-    public function getROStatusCount($user_id, $category) {
+    public function getROStatusCount($user_id, $statusString) {
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(DISTINCT d.id) FROM records_document d
+            SELECT COUNT(DISTINCT d.id)
+            FROM records_document d
             JOIN records_status s ON d.status_id = s.id
-            LEFT JOIN records_trackinghistory th ON d.id = th.document_id
-            WHERE s.category = ?
-            AND (d.creator_id = ? OR th.acted_by_id = ?)
+            WHERE (s.category = ? OR s.name = ?)
+            AND (d.creator_id = ? OR d.id IN (SELECT document_id FROM records_trackinghistory WHERE acted_by_id = ?))
         ");
-        $stmt->execute([$category, $user_id, $user_id]);
+        $stmt->execute([$statusString, $statusString, $user_id, $user_id]);
         return $stmt->fetchColumn() ?: 0;
     }
 

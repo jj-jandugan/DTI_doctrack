@@ -162,11 +162,12 @@ require_once BASE_PATH . 'includes/header.php';
                                 <div class="text-muted small"><?= !empty($doc['sender']) ? htmlspecialchars(trim($doc['sender'])) : 'N/A' ?></div>
                             </td>
                             <td class="search-target">
-                                <div class="text-dark text-wrap" style="word-break: break-word;">
-                                    <?= htmlspecialchars($doc['destination_name'] ?? 'Internal Routing') ?>
+                                <div class="text-dark text-wrap" style="word-break: break-word; font-size: 0.85rem;">
+                                    <!-- FIXED: Changed destination_name to address_name -->
+                                    <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
                                 </div>
-                                <div class="text-muted small text-wrap" style="word-break: break-word;">
-                                    <?= !empty($doc['receiver_name']) ? htmlspecialchars($doc['receiver_name']) : 'N/A' ?>
+                                <div class="text-muted small text-wrap" style="word-break: break-word; font-size: 0.75rem;">
+                                    <?= !empty($doc['receiver_name']) ? htmlspecialchars($doc['receiver_name']) : 'No receivers assigned' ?>
                                 </div>
                             </td>
                             <td class="text-dark search-target text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($doc['subject']) ?>">
@@ -185,6 +186,7 @@ require_once BASE_PATH . 'includes/header.php';
     </div>
 </div>
 
+<!-- Modal: New Document -->
 <div class="modal fade" id="newDocModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content custom-modal">
@@ -263,7 +265,7 @@ require_once BASE_PATH . 'includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                        </div>  
+                        </div>
                         <div id="block-group" class="routing-block d-none">
                             <select class="form-select custom-input" name="route_group" id="route_group">
                                 <option value="">Select Group...</option>
@@ -340,6 +342,7 @@ require_once BASE_PATH . 'includes/header.php';
     </div>
 </div>
 
+<!-- Modal: Cancel Confirm -->
 <div class="modal fade" id="cancelConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content custom-modal" style="border: 2px solid #eab308;">

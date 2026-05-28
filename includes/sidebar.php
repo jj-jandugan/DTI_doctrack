@@ -27,6 +27,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span class="sidebar-text">System Configurations</span>
         </a>
 
+         <a href="<?= BASE_URL ?>templates/admin/documentRecords.php" class="sidebar-link <?= ($current_page == 'documentRecords.php') ? 'active' : '' ?>">
+        <i class="fa-solid fa-database sidebar-icon me-3"></i>
+        <span class="sidebar-text">Document Records</span>
+    </a>
+
         <a href="<?= BASE_URL ?>templates/admin/auditLogs.php" class="sidebar-link <?= ($current_page == 'auditLogs.php') ? 'active' : '' ?>">
             <i class="fa-solid fa-shield-halved sidebar-icon me-3"></i>
             <span class="sidebar-text">Audit Logs</span>
@@ -82,7 +87,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     <?php endif; ?>
 
-    <?php if ($role === 'RD' || $role === 'ARD'): ?>
+    <?php if ($role === 'Signatory'): ?>
         <a href="<?= BASE_URL ?>templates/signatory/signDashboard.php" class="sidebar-link <?= ($current_page == 'signDashboard.php') ? 'active' : '' ?>">
             <i class="fa-solid fa-table-cells-large sidebar-icon me-3"></i>
             <span class="sidebar-text">Dashboard</span>

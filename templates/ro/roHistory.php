@@ -26,49 +26,36 @@ try {
     // $all_attachments = $docManager->getAllAttachmentsGrouped();
 
     // BUILD THE JSON PAYLOAD FOR THE EXCEL EXPORT
-    $export_payload = [];
-    foreach ($history_docs as $doc) {
+   $export_payload = [];
+foreach ($history_docs as $doc) {
+    $final_action_time = !empty($doc['updated_at']) ? $doc['updated_at'] : $doc['created_at'];
 
-        // FIX: For the RO History, the Sender column is explicitly set to the Origin!
-        $origin_name = !empty($doc['origin_name']) ? $doc['origin_name'] : 'Internal DTI';
-        $sender_person = !empty($doc['sender']) ? $doc['sender'] : 'N/A';
+    $origin_name = !empty($doc['origin_name']) ? $doc['origin_name'] : 'Internal DTI';
+    $sender_person = !empty($doc['sender']) ? $doc['sender'] : 'N/A';
+    $sender = trim($origin_name . ' - ' . $sender_person, " -");
 
-        // Formats as "Origin Name - Person Name" (e.g. "DENR - John Doe")
-        $sender = trim($origin_name . ' - ' . $sender_person, " -");
+    $receiver = trim(($doc['address_name'] ?? 'Internal Routing') . ' - ' . ($doc['receiver_name'] ?? 'N/A'), " -");
 
-        $receiver = trim(($doc['address_name'] ?? 'Internal Routing') . ' - ' . ($doc['receiver_name'] ?? 'N/A'), " -");
+    $search_text = strtolower($doc['dts_no'] . ' ' . $doc['subject'] . ' ' . $origin_name . ' ' . $sender_person);
 
-        // Combine ALL text columns so the Javascript export filter can find everything
-        $search_text = strtolower(
-            $doc['dts_no'] . ' ' .
-            $doc['subject'] . ' ' .
-            $origin_name . ' ' .
-            $sender_person . ' ' .
-            ($doc['address_name'] ?? '') . ' ' .
-            ($doc['receiver_name'] ?? '') . ' ' .
-            ($doc['c_fname'] ?? '') . ' ' .
-            ($doc['c_lname'] ?? '') . ' ' .
-            trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? '')) . ' ' .
-            ($doc['status_name'] ?? '') . ' ' .
-            ($doc['classification'] ?? '') . ' ' .
-            ($doc['doc_type'] ?? '')
-        );
-
-        $export_payload[] = [
-            'dts'       => $doc['dts_no'],
-            'created'   => date('F d, Y g:i A', strtotime($doc['created_at'])),
-            'date_raw'  => date('Y-m-d', strtotime($doc['created_at'])),
-            'class'     => $doc['classification'] ?? 'N/A',
-            'type'      => $doc['doc_type'] ?? 'N/A',
-            'subject'   => $doc['subject'],
-            'sender'    => $sender,
-            'receiver'  => $receiver,
-            'signatory' => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
-            'status'    => $doc['status_name'],
-            'direction' => strtolower($doc['doc_direction'] ?? ''),
-            'search'    => $search_text
-        ];
-    }
+    $export_payload[] = [
+        'dts'         => $doc['dts_no'],
+        'action_date' => date('F d, Y g:i A', strtotime($final_action_time)),
+        'created'     => date('F d, Y g:i A', strtotime($doc['created_at'])),
+        'date_raw'    => date('Y-m-d', strtotime($final_action_time)),
+        'class'       => $doc['classification'] ?? 'N/A',
+        'type'        => $doc['doc_type'] ?? 'N/A',
+        'subject'     => $doc['subject'],
+        'particulars' => $doc['particulars'] ?? '', // Instruction
+        'sender'      => $sender,
+        'receiver'    => $receiver,
+        'signatory'   => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
+        'creator'     => trim(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? 'System')), // Processor
+        'status'      => $doc['status_name'],
+        'direction'   => strtolower($doc['doc_direction'] ?? ''),
+        'search'      => $search_text
+    ];
+}
     $export_json = json_encode($export_payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 
 } catch (Exception $e) {
@@ -175,7 +162,6 @@ require_once BASE_PATH . 'includes/header.php';
                         <th>STATUS</th>
                         <th>DATE & TIME CREATED</th>
                         <th>LAST UPDATE</th>
-                        <th>ORIGIN</th>
                         <th>ADDRESS</th>
                         <th>SUBJECT</th>
                         <th>SIGNATORY</th>
@@ -213,10 +199,6 @@ require_once BASE_PATH . 'includes/header.php';
                                 <?php else: ?>
                                     <span class="text-muted">N/A</span>
                                 <?php endif; ?>
-                            </td>
-                            <td class="search-target">
-                                <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?>"><?= htmlspecialchars($doc['origin_name'] ?? 'Internal DTI') ?></div>
-                                <div class="text-muted" style="font-size: 0.8rem;"><?= !empty($doc['sender']) ? htmlspecialchars(trim($doc['sender'])) : 'N/A' ?></div>
                             </td>
                             <td class="search-target">
                                 <div class="text-dark text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>">

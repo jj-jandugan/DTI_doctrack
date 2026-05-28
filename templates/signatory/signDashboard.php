@@ -5,7 +5,7 @@ require_once '../../classes/DocumentManager.php';
 require_once '../../classes/dashboard.php'; // Ensure Dashboard class is loaded
 
 // Security Check: Only 'RD' or 'ARD' role can access
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Signatory') {
     header("Location: " . BASE_URL . "login.php");
     exit;
 }

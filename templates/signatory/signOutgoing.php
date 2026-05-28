@@ -4,7 +4,7 @@ require_once '../../classes/database.php';
 require_once '../../classes/DocumentManager.php';
 
 // Security Check: Only 'RD' or 'ARD' role can access
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Signatory') {
     header("Location: " . BASE_URL . "login.php");
     exit;
 }
@@ -142,9 +142,9 @@ require_once BASE_PATH . 'includes/header.php';
                         <td class="text-dark text-truncate search-target"><?= htmlspecialchars($doc['subject']) ?></td>
 
                         <td class="search-target">
-                            <div class="text-dark" style="font-size: 0.85rem;">
-                                <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
-                            </div>
+                        <div class="text-dark" style="font-size: 0.85rem;">
+                            <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
+                        </div>
                             <div class="text-muted mt-1" style="font-size: 0.75rem; line-height: 1.2;">
                                 <?php
                                     // If route is external, the person's name is stored in the 'sender' column

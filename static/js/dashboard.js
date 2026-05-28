@@ -18,17 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'pie',
             data: {
                 // UPDATED: Added Rejected and Cancelled to labels
-                labels: ['Ongoing', 'For Approval', 'Approved', 'Rejected', 'Cancelled', 'Closed'],
+                labels: ['For Approval', 'Approved', 'Rejected', 'Cancelled', 'Closed'],
                 datasets: [{
                     data: dashboardData.pieData,
                     // UPDATED: Colors matched to status.css
                     backgroundColor: [
-                        '#3b82f6', // Ongoing (Blue)
-                        '#f59e0b', // For Approval (Yellow)
-                        '#10b981', // Approved (Green)
-                        '#ef4444', // Rejected (Red)
-                        '#64748b', // Cancelled (Slate Gray)
-                        '#0f766e'  // Closed (Teal)
+                        '#f59e0b', // For Approval
+                        '#1d4ed8', // Approved
+                        '#dc3545', // Rejected
+                        '#6b7280', // Cancelled
+                        '#10b981' // Closed (Teal)
                     ],
                     borderWidth: 2,
                     borderColor: '#ffffff'

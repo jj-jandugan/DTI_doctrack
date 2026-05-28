@@ -3,7 +3,7 @@
 require_once '../../classes/database.php';
 require_once '../../classes/DocumentManager.php';
 
-if (!isset($_SESSION['role']) || !in_array($_SESSION['role'], ['RD', 'ARD'])) {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Signatory') {
     header("Location: " . BASE_URL . "login.php");
     exit;
 }
@@ -15,67 +15,67 @@ $docManager = new DocumentManager($pdo);
 try {
     $doc_types       = $docManager->getDocumentTypes();
     $classifications = $docManager->getClassifications();
-
-    // NEW FETCHING LOGIC: getSignatoryHistory natively handles the exact lifecycle
-    // (Rejected -> Resubmitted, Approved -> Closed)
     $history_docs    = $docManager->getSignatoryHistory($user_id);
-
     $all_recipients  = $docManager->getRecipientsByDocument();
 
     $export_payload = [];
     foreach ($history_docs as $doc) {
-        $receiver_names = 'N/A';
-        if (isset($all_recipients[$doc['id']])) {
-            $clean_names = array_map(function($p) { return explode(' (', $p)[0]; }, $all_recipients[$doc['id']]);
-            $receiver_names = implode(', ', $clean_names);
-        } elseif (!empty($doc['sender'])) {
-            $receiver_names = $doc['sender'];
+        $doc_id = $doc['id'];
+        $final_action_time = !empty($doc['updated_at']) ? $doc['updated_at'] : $doc['created_at'];
+
+        // --- FIXED ADDRESS FETCHING ---
+        $full_offices = $docManager->getFullOfficeList($doc_id);
+        $display_address = $full_offices ?: ($doc['address_name'] ?? 'Internal Routing');
+
+        // --- FIXED RECIPIENT NAMES FETCHING ---
+        $receiver_names_arr = [];
+        // 1. Get Internal Names
+        if (isset($all_recipients[$doc_id])) {
+            foreach ($all_recipients[$doc_id] as $p) {
+                $receiver_names_arr[] = explode(' (', $p)[0];
+            }
+        }
+        // 2. Get External/Within DTI Names
+        $stmtExt = $pdo->prepare("SELECT contact_person FROM records_externalrecipient WHERE document_id = ?");
+        $stmtExt->execute([$doc_id]);
+        $ext_people = $stmtExt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($ext_people as $cp) {
+            if (!empty(trim($cp))) $receiver_names_arr[] = trim($cp);
         }
 
-        $receiver = trim(($doc['address_name'] ?? 'Internal Routing') . ' - ' . $receiver_names, " -");
+        $final_receiver_names = !empty($receiver_names_arr)
+            ? implode(', ', array_unique($receiver_names_arr))
+            : 'No specific personnel';
 
-        // --- SENDER LOGIC ---
+        $receiver = trim($display_address . ' - ' . $final_receiver_names, " -");
+
+        // Sender Logic
         $raw_origin = !empty($doc['origin_name']) ? trim($doc['origin_name']) : '';
         if ($raw_origin && strtolower($raw_origin) !== 'internal dti') {
-            // Document is from Outside Offices / Other Branches
             $display_office = $raw_origin;
             $display_person = !empty($doc['sender']) ? trim($doc['sender']) : 'Unknown Sender';
         } else {
-            // Document is Internal (From a Division)
             $display_office = !empty($doc['c_division']) ? trim($doc['c_division']) : 'System User';
             $display_person = trim(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? ''));
         }
-
-        // Excel Format: "Office/Division, Name"
         $sender = $display_office . ', ' . $display_person;
 
-        // Combine ALL text columns so the Javascript export filter can find everything
-        $search_text = strtolower(
-            ($doc['dts_no'] ?? '') . ' ' .
-            ($doc['subject'] ?? '') . ' ' .
-            $display_office . ' ' .
-            $display_person . ' ' .
-            ($doc['address_name'] ?? '') . ' ' .
-            $receiver_names . ' ' .
-            trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? '')) . ' ' .
-            ($doc['status_name'] ?? '') . ' ' .
-            ($doc['classification'] ?? '') . ' ' .
-            ($doc['doc_type'] ?? '')
-        );
-
         $export_payload[] = [
-            'dts'       => $doc['dts_no'] ?? '',
-            'created'   => date('F d, Y g:i A', strtotime($doc['created_at'])),
-            'date_raw'  => date('Y-m-d', strtotime($doc['created_at'])),
-            'class'     => $doc['classification'] ?? 'N/A',
-            'type'      => $doc['doc_type'] ?? 'N/A',
-            'subject'   => $doc['subject'] ?? '',
-            'sender'    => $sender,
-            'receiver'  => $receiver,
-            'signatory' => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
-            'status'    => $doc['status_name'] ?? '',
-            'direction' => strtolower($doc['doc_direction'] ?? ''),
-            'search'    => $search_text
+            'dts'         => $doc['dts_no'] ?? '',
+            'action_date' => date('F d, Y g:i A', strtotime($final_action_time)),
+            'created'     => date('F d, Y g:i A', strtotime($doc['created_at'])),
+            'date_raw'    => date('Y-m-d', strtotime($final_action_time)),
+            'class'       => $doc['classification'] ?? 'N/A',
+            'type'        => $doc['doc_type'] ?? 'N/A',
+            'subject'     => $doc['subject'] ?? '',
+            'particulars' => $doc['particulars'] ?? '',
+            'sender'      => $sender,
+            'receiver'    => $receiver,
+            'signatory'   => trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None')),
+            'creator'     => trim(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? 'System')),
+            'status'      => $doc['status_name'] ?? '',
+            'direction'   => strtolower($doc['doc_direction'] ?? ''),
+            'search'      => strtolower(($doc['dts_no'] ?? '') . ' ' . ($doc['subject'] ?? ''))
         ];
     }
     $export_json = json_encode($export_payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
@@ -86,6 +86,7 @@ try {
     $export_json = "[]";
 }
 
+// ... (CSS and JS parts remain the same)
 $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/cards.css">
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/creator.css">
@@ -96,7 +97,6 @@ $extra_css = '
 <link rel="stylesheet" href="' . BASE_URL . 'static/css/accept_docu.css">
 ';
 
-// Removed panel.js, kept export and filters
 $extra_js = '
 <script>const allHistoryData = ' . $export_json . ';</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -108,11 +108,11 @@ require_once BASE_PATH . 'includes/header.php';
 ?>
 
 <div class="dashboard-inner p-4">
-
     <?php if (isset($error_msg)): ?>
         <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i><?= htmlspecialchars($error_msg) ?></div>
     <?php endif; ?>
 
+    <!-- ... (Filters Section remain the same) ... -->
     <div class="filter-section mb-4">
         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-3">
             <button type="button" class="btn fw-bold shadow-sm d-flex align-items-center flex-shrink-0" onclick="exportToExcel()" style="background-color: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; transition: 0.2s;">
@@ -191,32 +191,36 @@ require_once BASE_PATH . 'includes/header.php';
                         <tr><td colspan="8" class="text-center py-5 text-muted">No historical records found.</td></tr>
                     <?php else: ?>
                         <?php foreach ($history_docs as $doc):
-                            // Receiver mapping
-                            $receiver_names = 'N/A';
-                            if (isset($all_recipients[$doc['id']])) {
-                                $clean_names = array_map(function($p) { return explode(' (', $p)[0]; }, $all_recipients[$doc['id']]);
-                                $receiver_names = implode(', ', $clean_names);
-                            } elseif (!empty($doc['sender'])) {
-                                $receiver_names = $doc['sender'];
+                            $doc_id = $doc['id'];
+
+                            // --- RE-APPLY THE SAME LOGIC FOR TABLE DISPLAY ---
+                            $full_offices = $docManager->getFullOfficeList($doc_id);
+                            $display_addr = $full_offices ?: ($doc['address_name'] ?? 'Internal Routing');
+
+                            $names_arr = [];
+                            if (isset($all_recipients[$doc_id])) {
+                                foreach ($all_recipients[$doc_id] as $p) { $names_arr[] = explode(' (', $p)[0]; }
                             }
+                            $stmtExt = $pdo->prepare("SELECT contact_person FROM records_externalrecipient WHERE document_id = ?");
+                            $stmtExt->execute([$doc_id]);
+                            $ext_p = $stmtExt->fetchAll(PDO::FETCH_COLUMN);
+                            foreach ($ext_p as $cp) { if (!empty(trim($cp))) $names_arr[] = trim($cp); }
+
+                            $display_names = !empty($names_arr) ? implode(', ', array_unique($names_arr)) : 'No specific personnel';
                         ?>
 
-                        <tr class="history-row clickable-row" onclick="window.location.href='signViewHist.php?id=<?= $doc['id'] ?>'" style="cursor: pointer;">
-
+                        <tr class="history-row clickable-row" onclick="window.location.href='signViewHist.php?id=<?= $doc_id ?>'" style="cursor: pointer;">
                             <td class="fw-bold text-primary search-target"><?= htmlspecialchars($doc['dts_no'] ?? '') ?></td>
-
                             <td>
                                 <span class="status <?= strtolower(str_replace(' ', '-', $doc['status_category'] ?? '')) ?> status-target">
                                     <?= htmlspecialchars($doc['status_name'] ?? '') ?>
                                 </span>
                             </td>
-
                             <td>
                                 <div class="text-dark"><?= date('M d, Y', strtotime($doc['created_at'])) ?></div>
                                 <div class="text-muted small"><?= date('h:i A', strtotime($doc['created_at'])) ?></div>
                                 <span class="d-none date-target"><?= date('Y-m-d', strtotime($doc['created_at'])) ?></span>
                             </td>
-
                             <td>
                                 <?php if (!empty($doc['updated_at'])): ?>
                                     <div class="text-dark"><?= date('M d, Y', strtotime($doc['updated_at'])) ?></div>
@@ -225,27 +229,24 @@ require_once BASE_PATH . 'includes/header.php';
                                     <span class="text-muted">N/A</span>
                                 <?php endif; ?>
                             </td>
-
                             <td class="text-dark search-target text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($doc['subject'] ?? '') ?>">
                                 <?= htmlspecialchars($doc['subject'] ?? '') ?>
                             </td>
-
                             <td class="search-target">
-                                <div class="text-dark small text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>">
-                                    <?= htmlspecialchars($doc['address_name'] ?? 'Internal Routing') ?>
+                                <div class="text-dark small text-truncate" style="max-width: 180px;" title="<?= htmlspecialchars($display_addr) ?>">
+                                    <?= htmlspecialchars($display_addr) ?>
                                 </div>
-                                <div class="text-muted" style="font-size: 0.7rem;"><?= htmlspecialchars($receiver_names) ?></div>
+                                <div class="text-muted text-truncate" style="font-size: 0.7rem; max-width: 180px;" title="<?= htmlspecialchars($display_names) ?>">
+                                    <?= htmlspecialchars($display_names) ?>
+                                </div>
                             </td>
-
                             <td class="small">
                                 <?= htmlspecialchars(trim(($doc['sig_fname'] ?? '') . ' ' . ($doc['sig_lname'] ?? 'None'))) ?>
                             </td>
-
                             <td class="search-target">
                                 <span class="text-dark small"><?= htmlspecialchars(($doc['c_fname'] ?? '') . ' ' . ($doc['c_lname'] ?? '')) ?></span><br>
                                 <span class="text-muted" style="font-size: 0.7rem;"><?= htmlspecialchars($doc['c_division'] ?? 'System') ?></span>
                             </td>
-
                             <td class="d-none type-target"><?= htmlspecialchars($doc['doc_type'] ?? '') ?></td>
                             <td class="d-none class-target"><?= htmlspecialchars($doc['classification'] ?? '') ?></td>
                             <td class="d-none direction-target"><?= strtolower($doc['doc_direction'] ?? '') ?></td>
@@ -255,7 +256,6 @@ require_once BASE_PATH . 'includes/header.php';
                 </tbody>
             </table>
         </div>
-
         <div id="pagination-container" class="d-flex justify-content-end mt-3 border-top pt-3"></div>
     </div>
 </div>

@@ -1,18 +1,31 @@
 // static/js/export.js
 
 function exportToExcel() {
+    // 1. Headers exactly as requested
     const wsData = [
-        ["DTS No.", "Date & Time Created", "Classification", "Document Type", "Subject", "Sender (Origin/Name)", "Receiver (Destination/Name)", "Signatory", "Status"]
+        [
+            "Control No.",
+            "Remarks",
+            "Form",
+            "Date & Time Created",
+            "Origin",
+            "Subject",
+            "Instruction",
+            "Authority",
+            "Destination",
+            "Processor",
+            "Action Taken",
+            "Status",
+            "Date & Time Closed"
+        ]
     ];
 
     let exportedCount = 0;
 
     // ==========================================
-    // METHOD A: UNPAGINATED JSON EXPORT (divHistory)
+    // METHOD A: JSON DATA SOURCE (divHistory)
     // ==========================================
     if (typeof allHistoryData !== 'undefined') {
-
-        // 1. Get current filter states from the DOM
         const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
         const classTerm = document.getElementById('classFilter') ? document.getElementById('classFilter').value.toLowerCase() : '';
         const typeTerm = document.getElementById('typeFilter') ? document.getElementById('typeFilter').value.toLowerCase() : '';
@@ -21,7 +34,6 @@ function exportToExcel() {
         const startTerm = document.getElementById('startDate') ? document.getElementById('startDate').value : '';
         const endTerm = document.getElementById('endDate') ? document.getElementById('endDate').value : '';
 
-        // 2. Filter the entire hidden database payload
         const filteredData = allHistoryData.filter(row => {
             const matchesSearch = row.search.includes(searchTerm);
             const matchesClass = classTerm === '' || (row.class || '').toLowerCase().includes(classTerm);
@@ -37,61 +49,68 @@ function exportToExcel() {
         });
 
         if (filteredData.length === 0) {
-            alert("No matching records to export. Please adjust your filters.");
+            alert("No matching records to export.");
             return;
         }
 
-        // 3. Map filtered data to Excel rows
+        // 2. Mapping PHP JSON keys to Excel columns
         filteredData.forEach(row => {
-            wsData.push([row.dts, row.created, row.class, row.type, row.subject, row.sender, row.receiver, row.signatory, row.status]);
+            wsData.push([
+                row.dts,            // Control No. (Dts No.)
+                row.class,          // Remarks (Classification)
+                row.type,           // Form (Document Type)
+                row.created,        // Date & Time Created
+                row.sender,         // Origin (Origin Office/Agency)
+                row.subject,        // Subject
+                row.particulars,    // Instruction (Particulars)
+                row.signatory,      // Authority (Signatory Name)
+                row.receiver,       // Destination (Address)
+                row.creator,        // Processor (Creator)
+                "Forwarded",        // Action Taken (Hardcoded)
+                row.status,         // Status
+                row.action_date     // Date & Time Closed (Last Update)
+            ]);
             exportedCount++;
         });
     }
     // ==========================================
-    // METHOD B: DOM SCRAPING FALLBACK (Other Pages)
+    // METHOD B: FALLBACK (Scraping what is available)
     // ==========================================
     else {
-        const rows = document.querySelectorAll('.doc-row, .desk-row, .history-row');
+        const rows = document.querySelectorAll('.history-row');
         rows.forEach(row => {
             if (window.getComputedStyle(row).display !== 'none') {
-                const dts = row.dataset.dts || '---';
-                const dateCreated = row.dataset.createdfull || '---';
-                const classification = row.dataset.class || '---';
-                const docType = row.dataset.type || '---';
-                const subject = row.dataset.subject || '---';
-                const sender = row.dataset.sender || '---';
-                const receiver = row.dataset.receiver || '---';
-                const signatory = row.dataset.signatory || '---';
-                const status = row.dataset.status || '---';
-
-                wsData.push([dts, dateCreated, classification, docType, subject, sender, receiver, signatory, status]);
+                // Scrapes only what is currently in your HTML table attributes
+                wsData.push([
+                    row.querySelector('.text-primary')?.innerText || '---',
+                    row.querySelector('.class-target')?.innerText || '---',
+                    row.querySelector('.type-target')?.innerText || '---',
+                    row.querySelectorAll('td')[2]?.innerText.replace(/\n/g, ' ') || '---',
+                    '---', // Origin not in basic table
+                    row.querySelector('.text-dark.search-target')?.innerText || '---',
+                    '---', // Particulars not in basic table
+                    row.querySelectorAll('td')[6]?.innerText || '---',
+                    row.querySelectorAll('td')[5]?.innerText.replace(/\n/g, ' ') || '---',
+                    row.querySelector('.search-target .text-dark')?.innerText || '---',
+                    "Forwarded",
+                    row.querySelector('.status-target')?.innerText || '---',
+                    row.querySelectorAll('td')[3]?.innerText.replace(/\n/g, ' ') || '---'
+                ]);
                 exportedCount++;
             }
         });
-
-        if (exportedCount === 0) {
-            alert("No visible records to export. Please adjust your filters.");
-            return;
-        }
     }
 
-    // ==========================================
-    // EXCEL FORMATTING AND DOWNLOAD
-    // ==========================================
+    // EXCEL GENERATION
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Auto-fit column widths
     const colWidths = wsData[0].map((_, colIndex) => ({
-        wch: Math.max(...wsData.map(row => (row[colIndex] ? row[colIndex].toString().length : 0))) + 2
+        wch: Math.max(...wsData.map(row => (row[colIndex] ? row[colIndex].toString().length : 0))) + 5
     }));
     ws['!cols'] = colWidths;
 
-    // Freeze header
-    ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
-
     XLSX.utils.book_append_sheet(wb, ws, "DTS_Records");
-
     const dateStr = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `DTS_Export_${dateStr}.xlsx`);
 }

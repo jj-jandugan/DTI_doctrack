@@ -17,12 +17,12 @@ class DocumentManager {
     }
 
     public function getSignatories() {
-        return $this->pdo->query("
-            SELECT u.id, u.first_name, u.last_name, p.role
-            FROM auth_user u
-            JOIN records_userprofile p ON u.id = p.user_id
-            WHERE p.role IN ('RD', 'ARD') AND u.is_active = 1
-        ")->fetchAll();
+    return $this->pdo->query("
+        SELECT u.id, u.first_name, u.last_name, p.role
+        FROM auth_user u
+        JOIN records_userprofile p ON u.id = p.user_id
+        WHERE p.role = 'Signatory' AND u.is_active = 1
+    ")->fetchAll();
     }
 
     public function getDtiBranches() {
@@ -108,32 +108,32 @@ class DocumentManager {
     }
 
     public function getUserHistory($user_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT DISTINCT d.id, d.dts_no, d.subject, d.created_at, d.due_date, d.sender,
-                   c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
-                   u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
-                   sig.first_name as sig_fname, sig.last_name as sig_lname,
-                   addr.name as address_name, orig.name as origin_name, dr.received_at,
-                   CASE WHEN d.creator_id = :uid THEN 'Outgoing' ELSE 'Incoming' END as doc_direction
-            FROM records_document d
-            LEFT JOIN records_classification c ON d.classification_id = c.id
-            LEFT JOIN records_documenttype t ON d.document_type_id = t.id
-            LEFT JOIN records_status s ON d.status_id = s.id
-            LEFT JOIN records_address addr ON d.address_id = addr.id
-            LEFT JOIN records_origin orig ON d.origin_id = orig.id
-            LEFT JOIN auth_user sig ON d.signatory_id = sig.id
-            LEFT JOIN auth_user u ON d.creator_id = u.id
-            LEFT JOIN records_userprofile p ON u.id = p.user_id
-            LEFT JOIN records_division divi ON p.division_id = divi.id
-            LEFT JOIN records_documentrecipient dr ON d.id = dr.document_id AND dr.recipient_user_id = :uid
-           WHERE (d.creator_id = :uid OR dr.recipient_user_id = :uid)
-              AND s.category IN ('CLOSED', 'CANCELLED')
-              AND UPPER(s.name) != 'REJECTED'
-            ORDER BY d.created_at DESC
-        ");
-        $stmt->execute(['uid' => $user_id]);
-        return $stmt->fetchAll();
-    }
+    $stmt = $this->pdo->prepare("
+        SELECT DISTINCT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at, d.due_date, d.sender,
+               c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
+               u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
+               sig.first_name as sig_fname, sig.last_name as sig_lname,
+               addr.name as address_name, orig.name as origin_name, dr.received_at,
+               CASE WHEN d.creator_id = :uid THEN 'Outgoing' ELSE 'Incoming' END as doc_direction
+        FROM records_document d
+        LEFT JOIN records_classification c ON d.classification_id = c.id
+        LEFT JOIN records_documenttype t ON d.document_type_id = t.id
+        LEFT JOIN records_status s ON d.status_id = s.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id
+        LEFT JOIN records_origin orig ON d.origin_id = orig.id
+        LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+        LEFT JOIN auth_user u ON d.creator_id = u.id
+        LEFT JOIN records_userprofile p ON u.id = p.user_id
+        LEFT JOIN records_division divi ON p.division_id = divi.id
+        LEFT JOIN records_documentrecipient dr ON d.id = dr.document_id AND dr.recipient_user_id = :uid
+       WHERE (d.creator_id = :uid OR dr.recipient_user_id = :uid)
+          AND s.category IN ('CLOSED', 'CANCELLED')
+          AND UPPER(s.name) != 'REJECTED'
+        ORDER BY d.created_at DESC
+    ");
+    $stmt->execute(['uid' => $user_id]);
+    return $stmt->fetchAll();
+}
 
     public function getAllAttachmentsGrouped() {
         $attStmt = $this->pdo->query("SELECT document_id, file_path FROM records_documentattachment");
@@ -194,30 +194,33 @@ class DocumentManager {
     }
 
     public function getApprovedForDispatch() {
-        $stmt = $this->pdo->prepare("
-            SELECT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at as approved_at,
-                   d.due_date, d.route_type, d.sender,
-                   c.name as classification, t.name as doc_type,
-                   s.name as status_name, s.category as status_category,
-                   u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
-                   addr.name as address_name, sig.first_name as sig_fname, sig.last_name as sig_lname
-            FROM records_document d
-            LEFT JOIN records_classification c ON d.classification_id = c.id
-            LEFT JOIN records_documenttype t ON d.document_type_id = t.id
-            LEFT JOIN records_status s ON d.status_id = s.id
-            LEFT JOIN records_address addr ON d.address_id = addr.id
-            LEFT JOIN auth_user u ON d.creator_id = u.id
-            LEFT JOIN records_userprofile p ON u.id = p.user_id
-            LEFT JOIN records_division divi ON p.division_id = divi.id
-            LEFT JOIN auth_user sig ON d.signatory_id = sig.id
-            WHERE (s.name = 'APPROVED' OR s.category = 'APPROVED')
-              AND d.route_type IN ('outside_dti', 'within_dti')
-            /* APPLIED PRIORITY SORTING: Due dates first, nearest/overdue first, fallback to approval time */
-            ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.updated_at ASC
-        ");
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
+    $stmt = $this->pdo->prepare("
+        SELECT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at as approved_at,
+               d.due_date, d.route_type, d.sender,
+               c.name as classification, t.name as doc_type,
+               s.name as status_name, s.category as status_category,
+               u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
+               addr.name as address_name, sig.first_name as sig_fname, sig.last_name as sig_lname,
+               /* NEW: Fetch external contact persons if they exist */
+               (SELECT GROUP_CONCAT(contact_person SEPARATOR ', ')
+                FROM records_externalrecipient
+                WHERE document_id = d.id AND contact_person IS NOT NULL AND contact_person != '') as external_receivers
+        FROM records_document d
+        LEFT JOIN records_classification c ON d.classification_id = c.id
+        LEFT JOIN records_documenttype t ON d.document_type_id = t.id
+        LEFT JOIN records_status s ON d.status_id = s.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id
+        LEFT JOIN auth_user u ON d.creator_id = u.id
+        LEFT JOIN records_userprofile p ON u.id = p.user_id
+        LEFT JOIN records_division divi ON p.division_id = divi.id
+        LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+        WHERE (s.name = 'APPROVED' OR s.category = 'APPROVED')
+          AND d.route_type IN ('outside_dti', 'within_dti')
+        ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.updated_at ASC
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 
     public function getEncodedIncoming($user_id) {
     $stmt = $this->pdo->prepare("
@@ -261,45 +264,50 @@ class DocumentManager {
     }
 
     public function getROHistory($user_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT DISTINCT d.id, d.dts_no, d.subject, d.created_at, d.updated_at, d.due_date, d.sender,
-                   (SELECT GROUP_CONCAT(CONCAT(ru.first_name, ' ', ru.last_name) SEPARATOR ', ') FROM records_documentrecipient dr2 JOIN auth_user ru ON dr2.recipient_user_id = ru.id WHERE dr2.document_id = d.id) as receiver_name,
-                   c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
-                   u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
-                   sig.first_name as sig_fname, sig.last_name as sig_lname,
-                   addr.name as address_name, orig.name as origin_name,
-                   CASE WHEN d.creator_id = :uid THEN 'Outgoing' ELSE 'Incoming' END as doc_direction
-            FROM records_document d
-            LEFT JOIN records_classification c ON d.classification_id = c.id
-            LEFT JOIN records_documenttype t ON d.document_type_id = t.id
-            LEFT JOIN records_status s ON d.status_id = s.id
-            LEFT JOIN records_address addr ON d.address_id = addr.id
-            LEFT JOIN records_origin orig ON d.origin_id = orig.id
-            LEFT JOIN auth_user sig ON d.signatory_id = sig.id
-            LEFT JOIN auth_user u ON d.creator_id = u.id
-            LEFT JOIN records_userprofile p ON u.id = p.user_id
-            LEFT JOIN records_division divi ON p.division_id = divi.id
-            LEFT JOIN records_trackinghistory th ON d.id = th.document_id
-            WHERE (d.creator_id = :uid OR th.acted_by_id = :uid)
-              AND s.category IN ('CANCELLED', 'CLOSED')
-              AND UPPER(s.name) != 'REJECTED'
-            ORDER BY d.created_at DESC
-        ");
-        $stmt->execute(['uid' => $user_id]);
-        return $stmt->fetchAll();
-    }
+    $stmt = $this->pdo->prepare("
+        SELECT DISTINCT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at, d.due_date, d.sender,
+               (SELECT GROUP_CONCAT(CONCAT(ru.first_name, ' ', ru.last_name) SEPARATOR ', ') FROM records_documentrecipient dr2 JOIN auth_user ru ON dr2.recipient_user_id = ru.id WHERE dr2.document_id = d.id) as receiver_name,
+               c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
+               u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
+               sig.first_name as sig_fname, sig.last_name as sig_lname,
+               addr.name as address_name, orig.name as origin_name,
+               CASE WHEN d.creator_id = :uid THEN 'Outgoing' ELSE 'Incoming' END as doc_direction
+        FROM records_document d
+        LEFT JOIN records_classification c ON d.classification_id = c.id
+        LEFT JOIN records_documenttype t ON d.document_type_id = t.id
+        LEFT JOIN records_status s ON d.status_id = s.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id
+        LEFT JOIN records_origin orig ON d.origin_id = orig.id
+        LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+        LEFT JOIN auth_user u ON d.creator_id = u.id
+        LEFT JOIN records_userprofile p ON u.id = p.user_id
+        LEFT JOIN records_division divi ON p.division_id = divi.id
+        LEFT JOIN records_trackinghistory th ON d.id = th.document_id
+        WHERE (d.creator_id = :uid OR th.acted_by_id = :uid)
+          AND s.category IN ('CANCELLED', 'CLOSED')
+          AND UPPER(s.name) != 'REJECTED'
+        ORDER BY d.created_at DESC
+    ");
+    $stmt->execute(['uid' => $user_id]);
+    return $stmt->fetchAll();
+}
+
 
     public function getDocumentForEdit($doc_id, $user_id) {
-        $stmt = $this->pdo->prepare("
-            SELECT d.*, orig.name as origin_name,
-                   s.name as status_name, s.category as status_category /* <-- FIX: Added missing status columns */
-            FROM records_document d
-            LEFT JOIN records_origin orig ON d.origin_id = orig.id
-            LEFT JOIN records_status s ON d.status_id = s.id /* <-- FIX: Joined the status table */
-            WHERE d.id = ? AND d.creator_id = ?
-        ");
-        $stmt->execute([$doc_id, $user_id]);
-        return $stmt->fetch();
+    $stmt = $this->pdo->prepare("
+        SELECT d.*,
+               orig.name as origin_name,
+               addr.name as address_name, /* <--- ADDED THIS */
+               s.name as status_name,
+               s.category as status_category
+        FROM records_document d
+        LEFT JOIN records_origin orig ON d.origin_id = orig.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id /* <--- ADDED THIS */
+        LEFT JOIN records_status s ON d.status_id = s.id
+        WHERE d.id = ? AND d.creator_id = ?
+    ");
+    $stmt->execute([$doc_id, $user_id]);
+    return $stmt->fetch();
     }
 
     public function getDocumentAttachments($doc_id) {
@@ -314,12 +322,16 @@ class DocumentManager {
                    s.name as status_name, s.category as status_category,
                    addr.name as address_name,
                    orig.name as origin_name,
-                   sig.first_name as sig_fname, sig.last_name as sig_lname
+                   sig.first_name as sig_fname, sig.last_name as sig_lname,
+                   u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division
             FROM records_document d
             LEFT JOIN records_status s ON d.status_id = s.id
             LEFT JOIN records_address addr ON d.address_id = addr.id
             LEFT JOIN records_origin orig ON d.origin_id = orig.id
             LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+            LEFT JOIN auth_user u ON d.creator_id = u.id
+            LEFT JOIN records_userprofile p ON u.id = p.user_id
+            LEFT JOIN records_division divi ON p.division_id = divi.id
             WHERE d.id = ?
         ");
         $stmt->execute([$doc_id]);
@@ -413,11 +425,13 @@ class DocumentManager {
         $stmt = $this->pdo->prepare("
             SELECT d.id, d.dts_no, d.subject, d.created_at, d.due_date, d.sender,
                    orig.name as origin_name, t.name as doc_type,
+                   c.name as classification,
                    s.name as status_name, s.category as status_category,
                    u.first_name as c_fname, u.last_name as c_lname,
-                   addr.name as address_name
+                   addr.name as address_name /* Ensure this is fetched */
             FROM records_document d
             JOIN records_status s ON d.status_id = s.id
+            LEFT JOIN records_classification c ON d.classification_id = c.id
             LEFT JOIN records_origin orig ON d.origin_id = orig.id
             LEFT JOIN records_documenttype t ON d.document_type_id = t.id
             LEFT JOIN records_address addr ON d.address_id = addr.id
@@ -426,7 +440,8 @@ class DocumentManager {
             WHERE d.signatory_id = ?
               AND s.category = 'FOR-APPROVAL'
               AND p.role = 'RO'
-            ORDER BY d.created_at DESC
+            /* PRIORITY SORTING */
+            ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
         ");
         $stmt->execute([$user_id]);
         return $stmt->fetchAll();
@@ -449,7 +464,7 @@ class DocumentManager {
         return $all_recipients;
     }
 
-    public function getOutgoingForApproval($user_id) {
+     public function getOutgoingForApproval($user_id) {
         $stmt = $this->pdo->prepare("
             SELECT d.id, d.dts_no, d.subject, d.created_at, d.due_date, d.route_type, d.sender,
                    c.name as classification, t.name as doc_type,
@@ -464,8 +479,11 @@ class DocumentManager {
             LEFT JOIN auth_user u ON d.creator_id = u.id
             LEFT JOIN records_userprofile p ON u.id = p.user_id
             LEFT JOIN records_division divi ON p.division_id = divi.id
-            WHERE d.signatory_id = ? AND s.category = 'FOR-APPROVAL' AND p.role = 'Division'
-            ORDER BY d.created_at DESC
+            WHERE d.signatory_id = ?
+              AND s.category = 'FOR-APPROVAL'
+              AND p.role = 'Division'
+            /* PRIORITY SORTING: Overdue/Nearest first, Nulls last */
+            ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
         ");
         $stmt->execute([$user_id]);
         return $stmt->fetchAll();
@@ -580,7 +598,7 @@ class DocumentManager {
             LEFT JOIN records_division divi ON p.division_id = divi.id
             WHERE dr.recipient_user_id = :uid
               /* FIX: Ensure it is Approved and hasn't been received yet */
-              AND (s.name = 'APPROVED' OR s.category = 'APPROVED')
+              AND s.category = 'APPROVED'
               AND dr.has_received = 0
               AND DATE(d.created_at) = CURDATE() /* FIX: Only routed today */
             ORDER BY d.created_at DESC LIMIT 5
@@ -731,11 +749,11 @@ class DocumentManager {
                 $res = $stmtGrp->fetchColumn();
                 if ($res) $destination_name = $res;
             } elseif ($data['route_type'] === 'within_dti' && !empty($data['dti_branch'])) {
-                $stmt = $this->pdo->prepare("SELECT name FROM records_dtibranch WHERE id = ?");
-                $stmt->execute([$data['dti_branch'][0]]);
-                $first_name = $stmt->fetchColumn();
-                $count = count($data['dti_branch']);
-                $destination_name = ($count > 1) ? $first_name . ' and ' . ($count - 1) . ' more' : $first_name;
+                $placeholders = implode(',', array_fill(0, count($data['dti_branch']), '?'));
+                $stmt = $this->pdo->prepare("SELECT name FROM records_dtibranch WHERE id IN ($placeholders)");
+                $stmt->execute($data['dti_branch']);
+                $branch_names = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $destination_name = implode(', ', $branch_names);
             } elseif ($data['route_type'] === 'outside_dti' && !empty($data['ext_office'])) {
                 $first_name = trim($data['ext_office'][0]);
                 $count = count($data['ext_office']);
@@ -863,11 +881,11 @@ class DocumentManager {
                 if ($res) $dest_name = $res;
             } elseif ($data['route_type'] === 'within_dti' && !empty($data['dti_branch'])) {
                 // Determine Summarized Name
-                $stmt = $this->pdo->prepare("SELECT name FROM records_dtibranch WHERE id = ?");
-                $stmt->execute([$data['dti_branch'][0]]);
-                $first_name = $stmt->fetchColumn();
-                $count = count($data['dti_branch']);
-                $dest_name = ($count > 1) ? $first_name . ' and ' . ($count - 1) . ' more' : $first_name;
+                $placeholders = implode(',', array_fill(0, count($data['dti_branch']), '?'));
+                $stmt = $this->pdo->prepare("SELECT name FROM records_dtibranch WHERE id IN ($placeholders)");
+                $stmt->execute($data['dti_branch']);
+                $branch_names = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $dest_name = implode(', ', $branch_names);
             } elseif ($data['route_type'] === 'outside_dti' && !empty($data['ext_office'])) {
                 // Determine Summarized Name
                 $first_name = trim($data['ext_office'][0]);
@@ -928,7 +946,14 @@ class DocumentManager {
                 $stmtGrp->execute([$data['route_group']]);
                 $recipients = $stmtGrp->fetchAll(PDO::FETCH_COLUMN);
             }
+
+            // ADDED: Logic to include the Receiving Officer if provided
+            if (!empty($data['receiving_officer'])) {
+                $recipients[] = $data['receiving_officer'];
+            }
+
             if (!empty($recipients)) {
+                $recipients = array_unique($recipients); // Prevent duplicates
                 $stmtRec = $this->pdo->prepare("INSERT INTO records_documentrecipient (document_id, recipient_user_id, has_received) VALUES (?, ?, 0)");
                 foreach ($recipients as $rid) { $stmtRec->execute([$document_id, $rid]); }
             }
@@ -978,7 +1003,7 @@ class DocumentManager {
             LEFT JOIN records_division divi ON p.division_id = divi.id
             LEFT JOIN auth_user sig ON d.signatory_id = sig.id
             WHERE dr.recipient_user_id = :uid
-              AND (s.name = 'APPROVED' OR s.category = 'APPROVED')
+              AND s.category = 'APPROVED'
               AND dr.has_received = 0
             ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
             LIMIT :limit OFFSET :offset
@@ -1000,7 +1025,7 @@ class DocumentManager {
             LEFT JOIN records_status s ON d.status_id = s.id
             WHERE dr.recipient_user_id = ?
               /* FIXED: Must match the filters in getOnMyDeskPaginated */
-              AND (s.name = 'APPROVED' OR s.category = 'APPROVED')
+              AND s.category = 'APPROVED'
               AND dr.has_received = 0
         ");
         $stmt->execute([$user_id]);
@@ -1008,30 +1033,30 @@ class DocumentManager {
     }
 
     public function getActiveOutgoingPaginated($user_id, $limit, $offset) {
-        $stmt = $this->pdo->prepare("
-            SELECT d.id, d.dts_no, d.subject, d.due_date, d.created_at, d.sender,
-                   s.name as status_name, s.category as status_category,
-                   sig.first_name as sig_fname, sig.last_name as sig_lname,
-                   c.name as class_name, addr.name as address_name,
-                   (SELECT GROUP_CONCAT(CONCAT(ru.first_name, ' ', ru.last_name) SEPARATOR ', ')
-                    FROM records_documentrecipient dr2
-                    LEFT JOIN auth_user ru ON dr2.recipient_user_id = ru.id
-                    WHERE dr2.document_id = d.id) as receiver_name
-            FROM records_document d
-            LEFT JOIN records_status s ON d.status_id = s.id
-            LEFT JOIN auth_user sig ON d.signatory_id = sig.id
-            LEFT JOIN records_classification c ON d.classification_id = c.id
-            LEFT JOIN records_address addr ON d.address_id = addr.id
-            WHERE d.creator_id = :uid AND s.category IN ('ONGOING', 'FOR-APPROVAL', 'APPROVED', 'REJECTED')
-            ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
-            LIMIT :limit OFFSET :offset
-        ");
-        $stmt->bindValue(':uid', $user_id, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
+    $stmt = $this->pdo->prepare("
+        SELECT d.*,
+               s.name as status_name, s.category as status_category,
+               sig.first_name as sig_fname, sig.last_name as sig_lname,
+               c.name as class_name, addr.name as address_name,
+               /* NEW: Fetch external contact persons from the external recipients table */
+               (SELECT GROUP_CONCAT(contact_person SEPARATOR ', ')
+                FROM records_externalrecipient
+                WHERE document_id = d.id AND contact_person IS NOT NULL AND contact_person != '') as external_names
+        FROM records_document d
+        LEFT JOIN records_status s ON d.status_id = s.id
+        LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+        LEFT JOIN records_classification c ON d.classification_id = c.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id
+        WHERE d.creator_id = :uid AND s.category IN ('ONGOING', 'FOR-APPROVAL', 'APPROVED', 'REJECTED')
+        ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
+        LIMIT :limit OFFSET :offset
+    ");
+    $stmt->bindValue(':uid', $user_id, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 
     public function getActiveOutgoingTotalCount($user_id) {
         $stmt = $this->pdo->prepare("
@@ -1105,7 +1130,8 @@ class DocumentManager {
             SELECT d.id, d.dts_no, d.subject, d.due_date, d.created_at, d.sender, orig.name as origin_name,
                    s.name as status_name, s.category as status_category,
                    sig.first_name as sig_fname, sig.last_name as sig_lname,
-                   c.name as class_name, t.name as doc_type, addr.name as destination_name,
+                   c.name as classification, t.name as doc_type,
+                   addr.name as address_name, /* Changed from destination_name to address_name for consistency */
                    (SELECT GROUP_CONCAT(CONCAT(ru.first_name, ' ', ru.last_name) SEPARATOR ', ')
                     FROM records_documentrecipient dr2
                     LEFT JOIN auth_user ru ON dr2.recipient_user_id = ru.id
@@ -1118,6 +1144,7 @@ class DocumentManager {
             LEFT JOIN records_classification c ON d.classification_id = c.id
             LEFT JOIN records_documenttype t ON d.document_type_id = t.id
             WHERE d.creator_id = :uid AND s.category IN ('FOR-APPROVAL', 'ONGOING', 'APPROVED', 'REJECTED')
+            /* PRIORITY SORTING */
             ORDER BY (d.due_date IS NULL) ASC, d.due_date ASC, d.created_at DESC
             LIMIT :limit OFFSET :offset
         ");
@@ -1127,7 +1154,8 @@ class DocumentManager {
         $stmt->execute();
         return $stmt->fetchAll();
     }
-    
+
+
     // --- ADD THESE FUNCTIONS TO YOUR DOCUMENTMANAGER CLASS ---
 
     public function getDocumentRecipientsList($document_id) {
@@ -1167,99 +1195,233 @@ class DocumentManager {
     }
 
     public function reuseDocument($original_doc_id, $user_id) {
-        try {
-            $this->pdo->beginTransaction();
+    try {
+        $this->pdo->beginTransaction();
 
-            // 1. Fetch original document
-            $stmt = $this->pdo->prepare("SELECT * FROM records_document WHERE id = ?");
-            $stmt->execute([$original_doc_id]);
-            $orig = $stmt->fetch();
+        // 1. Fetch only the core metadata from the original document
+        $stmt = $this->pdo->prepare("
+            SELECT d.*, c.name as class_name
+            FROM records_document d
+            LEFT JOIN records_classification c ON d.classification_id = c.id
+            WHERE d.id = ?
+        ");
+        $stmt->execute([$original_doc_id]);
+        $orig = $stmt->fetch();
 
-            if (!$orig) throw new Exception("Original document not found.");
+        if (!$orig) throw new Exception("Original document not found.");
 
-            // 2. Generate New DTS Number
-            $stmtClass = $this->pdo->prepare("SELECT name FROM records_classification WHERE id = ?");
-            $stmtClass->execute([$orig['classification_id']]);
-            $class_name = strtoupper(trim($stmtClass->fetchColumn()));
+        // 2. Generate Brand New DTS Number
+        $prefix = (strtoupper(trim($orig['class_name'])) === 'EXTERNAL') ? 'EX' : 'IN';
+        $year = date('y');
+        $pattern = $prefix . $year . '%';
 
-            $prefix = ($class_name === 'EXTERNAL') ? 'EX' : 'IN';
-            $year = date('y');
-            $pattern = $prefix . $year . '%';
+        $stmtLast = $this->pdo->prepare("SELECT dts_no FROM records_document WHERE dts_no LIKE ? ORDER BY dts_no DESC LIMIT 1");
+        $stmtLast->execute([$pattern]);
+        $last = $stmtLast->fetchColumn();
+        $next = $last ? ((int) substr($last, -6)) + 1 : 1;
+        $dts_no = $prefix . $year . str_pad($next, 6, '0', STR_PAD_LEFT);
 
-            $stmtLast = $this->pdo->prepare("SELECT dts_no FROM records_document WHERE dts_no LIKE ? ORDER BY dts_no DESC LIMIT 1");
-            $stmtLast->execute([$pattern]);
-            $last = $stmtLast->fetchColumn();
-            $next = $last ? ((int) substr($last, -6)) + 1 : 1;
-            $dts_no = $prefix . $year . str_pad($next, 6, '0', STR_PAD_LEFT);
+        // 3. Get the "FOR-APPROVAL" status ID (Standard for new drafts)
+        $stmtStatus = $this->pdo->prepare("SELECT id FROM records_status WHERE category = 'FOR-APPROVAL' LIMIT 1");
+        $stmtStatus->execute();
+        $status_id = $stmtStatus->fetchColumn();
 
-            // 3. Set Status to FOR-APPROVAL (or standard draft status)
-            $stmtStatus = $this->pdo->prepare("SELECT id FROM records_status WHERE category = 'FOR-APPROVAL' LIMIT 1");
-            $stmtStatus->execute();
-            $status_id = $stmtStatus->fetchColumn();
+        // 4. Insert cloned document as a FRESH record
+        // Note: created_at/updated_at are NOW(), creator is current user, status is reset
+        $stmtInsert = $this->pdo->prepare("INSERT INTO records_document
+            (dts_no, route_type, subject, particulars, due_date, created_at, updated_at,
+             classification_id, document_type_id, status_id, creator_id, signatory_id,
+             origin_id, address_id, sender)
+            VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?)");
 
-            // 4. Insert Cloned Document
-            $stmtInsert = $this->pdo->prepare("INSERT INTO records_document
-                (dts_no, route_type, subject, particulars, due_date, created_at, updated_at, classification_id, document_type_id, status_id, creator_id, signatory_id, origin_id, address_id, sender)
-                VALUES (?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmtInsert->execute([
+            $dts_no,
+            $orig['route_type'],
+            $orig['subject'],
+            $orig['particulars'],
+            $orig['due_date'],
+            $orig['classification_id'],
+            $orig['document_type_id'],
+            $status_id,
+            $user_id, // Logged in user becomes the new creator
+            $orig['signatory_id'],
+            $orig['origin_id'],
+            $orig['address_id'],
+            $orig['sender']
+        ]);
+        $new_doc_id = $this->pdo->lastInsertId();
 
-            $stmtInsert->execute([
-                $dts_no, $orig['route_type'], $orig['subject'], $orig['particulars'], $orig['due_date'],
-                $orig['classification_id'], $orig['document_type_id'], $status_id, $user_id,
-                $orig['signatory_id'], $orig['origin_id'], $orig['address_id'], $orig['sender']
-            ]);
-            $new_doc_id = $this->pdo->lastInsertId();
+        // 5. Clone Recipients (Resetting has_received to 0)
+        $stmtRec = $this->pdo->prepare("SELECT recipient_user_id FROM records_documentrecipient WHERE document_id = ?");
+        $stmtRec->execute([$original_doc_id]);
+        $recipients = $stmtRec->fetchAll(PDO::FETCH_COLUMN);
 
-            // 5. Clone Recipients
-            $stmtRec = $this->pdo->prepare("SELECT recipient_user_id FROM records_documentrecipient WHERE document_id = ?");
-            $stmtRec->execute([$original_doc_id]);
-            $recipients = $stmtRec->fetchAll(PDO::FETCH_COLUMN);
-
-            if (!empty($recipients)) {
-                $stmtInsRec = $this->pdo->prepare("INSERT INTO records_documentrecipient (document_id, recipient_user_id, has_received) VALUES (?, ?, 0)");
-                foreach ($recipients as $rid) {
-                    $stmtInsRec->execute([$new_doc_id, $rid]);
-                }
+        if (!empty($recipients)) {
+            $stmtInsRec = $this->pdo->prepare("INSERT INTO records_documentrecipient (document_id, recipient_user_id, has_received) VALUES (?, ?, 0)");
+            foreach ($recipients as $rid) {
+                $stmtInsRec->execute([$new_doc_id, $rid]);
             }
+        }
 
-            // 6. Clone Attachments (WITH BULLETPROOF FILE DUPLICATION)
-            $stmtAtt = $this->pdo->prepare("SELECT file_path FROM records_documentattachment WHERE document_id = ?");
-            $stmtAtt->execute([$original_doc_id]);
-            $attachments = $stmtAtt->fetchAll(PDO::FETCH_COLUMN);
+        // 6. Clone Attachments (Physical file duplication)
+        $stmtAtt = $this->pdo->prepare("SELECT file_path FROM records_documentattachment WHERE document_id = ?");
+        $stmtAtt->execute([$original_doc_id]);
+        $attachments = $stmtAtt->fetchAll(PDO::FETCH_COLUMN);
 
-            if (!empty($attachments)) {
-                $upload_dir = __DIR__ . '/../uploads/';
-                if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
+        if (!empty($attachments)) {
+            $upload_dir = __DIR__ . '/../uploads/';
+            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
 
-                $stmtInsAtt = $this->pdo->prepare("INSERT INTO records_documentattachment (document_id, file_path, uploaded_at) VALUES (?, ?, NOW())");
+            $stmtInsAtt = $this->pdo->prepare("INSERT INTO records_documentattachment (document_id, file_path, uploaded_at) VALUES (?, ?, NOW())");
 
-                foreach ($attachments as $old_path) {
-                    $old_file_name = basename($old_path);
-                    $old_full_path = __DIR__ . '/../' . $old_path;
-
-                    if (file_exists($old_full_path)) {
-                        // Generate a unique name so files don't overwrite each other
-                        $new_file_name = time() . '_' . uniqid() . '_copy_' . $old_file_name;
-                        $new_full_path = $upload_dir . $new_file_name;
-
-                        // Physically copy the file on the hard drive
-                        if (copy($old_full_path, $new_full_path)) {
-                            $stmtInsAtt->execute([$new_doc_id, 'uploads/' . $new_file_name]);
-                        }
+            foreach ($attachments as $old_path) {
+                $old_full_path = __DIR__ . '/../' . $old_path;
+                if (file_exists($old_full_path)) {
+                    $new_file_name = time() . '_' . uniqid() . '_reused_' . basename($old_path);
+                    if (copy($old_full_path, $upload_dir . $new_file_name)) {
+                        $stmtInsAtt->execute([$new_doc_id, 'uploads/' . $new_file_name]);
                     }
                 }
             }
-
-            // 7. Insert History
-            $this->pdo->prepare("INSERT INTO records_trackinghistory (action_taken, remarks, timestamp, acted_by_id, document_id) VALUES ('ENCODED', 'Document reused and cloned from an older record.', NOW(), ?, ?)")
-                      ->execute([$user_id, $new_doc_id]);
-
-            $this->pdo->commit();
-            return $new_doc_id; // Return the NEW ID to redirect to edit page
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            throw $e;
         }
+
+        // 7. Fresh Tracking History entry (Mandatory reference to old DTS)
+        $log_remarks = "Document reused from DTS No. " . $orig['dts_no'];
+        $this->pdo->prepare("INSERT INTO records_trackinghistory (action_taken, remarks, timestamp, acted_by_id, document_id) VALUES ('ENCODED', ?, NOW(), ?, ?)")
+                  ->execute([$log_remarks, $user_id, $new_doc_id]);
+
+        $this->pdo->commit();
+        return $new_doc_id;
+
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        throw $e;
+    }
+}
+
+
+    public function getFullOfficeList($doc_id) {
+        // 1. Check for Internal Recipient Divisions (Fixed table name)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT divi.name
+            FROM records_documentrecipient dr
+            JOIN records_userprofile p ON dr.recipient_user_id = p.user_id
+            JOIN records_division divi ON p.division_id = divi.id
+            WHERE dr.document_id = ?
+        ");
+        $stmt->execute([$doc_id]);
+        $internal = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // 2. Check for External Recipient Branches (within_dti)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT b.name
+            FROM records_externalrecipient er
+            JOIN records_dtibranch b ON er.dtibranch_id = b.id
+            WHERE er.document_id = ? AND er.type = 'within_dti'
+        ");
+        $stmt->execute([$doc_id]);
+        $external_dti = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // 3. Check for External Recipient Offices (outside_dti)
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT ext_office
+            FROM records_externalrecipient
+            WHERE document_id = ? AND type = 'outside_dti'
+        ");
+        $stmt->execute([$doc_id]);
+        $external_out = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $all = array_unique(array_merge($internal, $external_dti, $external_out));
+        return !empty($all) ? implode(', ', $all) : null;
     }
 
+    // --- ADMIN: Global History Fetching ---
+    public function getGlobalHistoryAll() {
+    $stmt = $this->pdo->prepare("
+        SELECT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at, d.due_date, d.sender,
+               c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
+               u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
+               sig.first_name as sig_fname, sig.last_name as sig_lname,
+               addr.name as address_name, orig.name as origin_name
+        FROM records_document d
+        LEFT JOIN records_classification c ON d.classification_id = c.id
+        LEFT JOIN records_documenttype t ON d.document_type_id = t.id
+        LEFT JOIN records_status s ON d.status_id = s.id
+        LEFT JOIN records_address addr ON d.address_id = addr.id
+        LEFT JOIN records_origin orig ON d.origin_id = orig.id
+        LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+        LEFT JOIN auth_user u ON d.creator_id = u.id
+        LEFT JOIN records_userprofile p ON u.id = p.user_id
+        LEFT JOIN records_division divi ON p.division_id = divi.id
+        WHERE s.category IN ('CLOSED', 'CANCELLED')
+        ORDER BY d.updated_at DESC
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 
+    public function getGlobalHistoryPaginated($limit, $offset) {
+        $stmt = $this->pdo->prepare("
+            SELECT d.id, d.dts_no, d.subject, d.particulars, d.created_at, d.updated_at, d.due_date, d.sender,
+                   c.name as classification, t.name as doc_type, s.name as status_name, s.category as status_category,
+                   u.first_name as c_fname, u.last_name as c_lname, divi.name as c_division,
+                   sig.first_name as sig_fname, sig.last_name as sig_lname,
+                   addr.name as address_name, orig.name as origin_name,
+                   p.role as creator_role,
+                   CASE WHEN p.role = 'RO' THEN 'Incoming' ELSE 'Outgoing' END as doc_direction
+            FROM records_document d
+            LEFT JOIN records_classification c ON d.classification_id = c.id
+            LEFT JOIN records_documenttype t ON d.document_type_id = t.id
+            LEFT JOIN records_status s ON d.status_id = s.id
+            LEFT JOIN records_address addr ON d.address_id = addr.id
+            LEFT JOIN records_origin orig ON d.origin_id = orig.id
+            LEFT JOIN auth_user sig ON d.signatory_id = sig.id
+            LEFT JOIN auth_user u ON d.creator_id = u.id
+            LEFT JOIN records_userprofile p ON u.id = p.user_id
+            LEFT JOIN records_division divi ON p.division_id = divi.id
+            WHERE s.category IN ('CLOSED', 'CANCELLED')
+            ORDER BY d.updated_at DESC
+            LIMIT :limit OFFSET :offset
+        ");
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getGlobalHistoryTotalCount() {
+        $stmt = $this->pdo->query("
+            SELECT COUNT(d.id) FROM records_document d
+            JOIN records_status s ON d.status_id = s.id
+            WHERE s.category IN ('CLOSED', 'CANCELLED')
+        ");
+        return $stmt->fetchColumn() ?: 0;
+    }
+
+    public function getDocumentAttachmentsByCategory($doc_id) {
+    $stmt = $this->pdo->prepare("SELECT * FROM records_documentattachment WHERE document_id = ? ORDER BY is_signed ASC, uploaded_at ASC");
+    $stmt->execute([$doc_id]);
+    $all = $stmt->fetchAll();
+
+    $organized = ['original' => [], 'signed' => []];
+    foreach ($all as $att) {
+        // We check for a column 'is_signed'. If it doesn't exist in your DB yet,
+        // you should add it: ALTER TABLE records_documentattachment ADD is_signed TINYINT(1) DEFAULT 0;
+        if (isset($att['is_signed']) && $att['is_signed'] == 1) {
+            $organized['signed'][] = $att;
+        } else {
+            $organized['original'][] = $att;
+        }
+    }
+    return $organized;
+    }
+
+    public function getRecordsOfficers() {
+    return $this->pdo->query("
+        SELECT u.id, u.first_name, u.last_name
+        FROM auth_user u
+        JOIN records_userprofile p ON u.id = p.user_id
+        WHERE p.role = 'RO' AND u.is_active = 1
+    ")->fetchAll();
+    }
 }

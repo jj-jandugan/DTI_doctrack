@@ -274,8 +274,7 @@ require_once BASE_PATH . 'includes/header.php';
                     <option value="">Filter by Role (All)</option>
                     <option value="Admin">Admin</option>
                     <option value="RO">Records Officer (RO)</option>
-                    <option value="RD">Regional Director (RD)</option>
-                    <option value="ARD">Asst. Regional Director (ARD)</option>
+                    <option value="Signatory">Signatory</option> <!-- UPDATED -->
                     <option value="Division">Division Staff</option>
                 </select>
             </div>
@@ -417,8 +416,7 @@ require_once BASE_PATH . 'includes/header.php';
                                 <option value="" selected disabled>Select Role...</option>
                                 <option value="Admin">Admin</option>
                                 <option value="RO">Records Officer (RO)</option>
-                                <option value="RD">Regional Director (RD)</option>
-                                <option value="ARD">Asst. Regional Director (ARD)</option>
+                                <option value="Signatory">Signatory</option> <!-- UPDATED -->
                                 <option value="Division">Division Staff</option>
                             </select>
                         </div>
@@ -478,8 +476,7 @@ require_once BASE_PATH . 'includes/header.php';
                             <select class="form-select custom-input" name="role" id="edit_role" required>
                                 <option value="Admin">Admin</option>
                                 <option value="RO">Records Officer (RO)</option>
-                                <option value="RD">Regional Director (RD)</option>
-                                <option value="ARD">Asst. Regional Director (ARD)</option>
+                                <option value="Signatory">Signatory</option> <!-- UPDATED -->
                                 <option value="Division">Division Staff</option>
                             </select>
                         </div>
